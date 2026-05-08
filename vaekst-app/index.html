@@ -282,6 +282,51 @@
       font-family: inherit; transition: all 0.15s;
     }
     .stikord-btn:active { background: rgba(139,92,246,0.3); }
+
+    /* IMPULS FAB */
+    .impuls-fab {
+      position: fixed; bottom: 72px; left: 16px;
+      width: 62px; height: 62px; border-radius: 50%;
+      background: #8b5cf6; color: #fff; border: none;
+      font-size: 10px; font-weight: 800; cursor: pointer; z-index: 200;
+      box-shadow: 0 4px 24px rgba(139,92,246,0.55);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1px; transition: transform 0.1s; font-family: inherit;
+    }
+    .impuls-fab:active { transform: scale(0.93); }
+
+    /* IMPULS OVERLAY */
+    .impuls-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #08081a; z-index: 500; overflow-y: auto; padding: 20px 16px 40px;
+    }
+    .impuls-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+
+    /* TIMER */
+    .timer-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
+    .timer-val { font-size: 36px; font-weight: 800; min-width: 60px; text-align: center; }
+    .timer-btn {
+      width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border);
+      background: var(--card2); color: var(--text); font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-family: inherit;
+    }
+    .timer-unit-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .timer-unit-btn {
+      padding: 8px 18px; border-radius: 20px; border: 2px solid var(--border);
+      background: var(--card2); color: var(--muted); font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .timer-unit-btn.on { border-color: var(--purple); background: rgba(139,92,246,0.15); color: #a78bfa; }
+
+    /* YESNO */
+    .yesno-row { display: flex; gap: 10px; margin-top: 10px; }
+    .yn-btn {
+      flex: 1; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700;
+      cursor: pointer; border: 2px solid var(--border); background: var(--card2);
+      color: var(--text); font-family: inherit; transition: all 0.15s;
+    }
+    .yn-btn.yes.on { border-color: var(--green); background: rgba(16,185,129,0.15); color: var(--green); }
+    .yn-btn.no.on  { border-color: var(--red);   background: rgba(239,68,68,0.15);   color: var(--red); }
   </style>
 </head>
 <body>
@@ -353,9 +398,27 @@
   <div class="reminder-box">
     <div class="reminder-title">⏰ 5-minutters check</div>
     <div class="reminder-q" id="reminderQ"></div>
-    <button class="btn-primary" onclick="closeReminder()">Forstået</button>
+    <div style="display:flex; gap:10px; margin-top:4px;">
+      <button class="yn-btn yes" onclick="closeReminder(true)" style="flex:1;">Ja</button>
+      <button class="yn-btn no"  onclick="closeReminder(false)" style="flex:1;">Nej</button>
+    </div>
   </div>
 </div>
+
+<!-- IMPULS OVERLAY -->
+<div class="impuls-overlay" id="impulsOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:#a78bfa;">💡 Impuls</div>
+    <button class="close-x" onclick="closeImpuls()">✕</button>
+  </div>
+  <div id="impulsContent"></div>
+</div>
+
+<!-- IMPULS FAB -->
+<button class="impuls-fab" onclick="openImpuls()">
+  <span style="font-size:22px;">💡</span>
+  <span>IMPULS</span>
+</button>
 
 <!-- PANIC FAB -->
 <button class="panic-fab" onclick="openPanic()">
@@ -586,7 +649,7 @@ function calcTodayTotal() {
   const entries = getEntries().filter(e => e.date === today);
   const ciScore = entries.reduce((sum, e) => sum + calcEntryScore(e), 0);
   const daily = getDailies()[today];
-  return ciScore + calcDailyScore(daily);
+  return ciScore + calcDailyScore(daily) + getImpulsScore();
 }
 
 function scoreStyle(score) {
@@ -1001,12 +1064,34 @@ function saveDailyAction() {
 
 // ---- HISTORY ----
 function renderHistory() {
+  const week = getWeekKey();
+  const weekImpulses = (getData().impulses || []).filter(i => i.week === week && i.kept && i.type === 'impuls');
+  const expiredTimers = (getData().impulses || []).filter(i => i.timerTarget && i.timerTarget <= Date.now());
+
+  let topHtml = '';
+  if (expiredTimers.length) {
+    topHtml += `<div class="card" style="border:2px solid rgba(245,158,11,0.4); background:rgba(245,158,11,0.06);">
+      <div class="card-title" style="color:var(--yellow);">⏰ Påmindelser udløbet</div>
+      ${expiredTimers.map(i => `<div style="padding:8px 0; font-size:14px; border-bottom:1px solid var(--border);">📌 "${i.text}"</div>`).join('')}
+    </div>`;
+  }
+  if (weekImpulses.length) {
+    topHtml += `<div class="card">
+      <div class="card-title">💭 Ugens impulser</div>
+      ${weekImpulses.map(i => `
+        <div style="padding:10px 0; border-bottom:1px solid var(--border); font-size:14px;">
+          <div style="font-weight:600;">"${i.text}"</div>
+          <div style="color:var(--muted); font-size:12px; margin-top:3px;">${new Date(i.ts).toLocaleDateString('da-DK',{weekday:'short',day:'numeric',month:'short'})}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
   const entries = [...getEntries()].reverse();
   if (entries.length === 0) {
-    document.getElementById('histContent').innerHTML = '<p style="color:var(--muted); text-align:center; padding:40px;">Ingen registreringer endnu</p>';
+    document.getElementById('histContent').innerHTML = topHtml + '<p style="color:var(--muted); text-align:center; padding:40px;">Ingen check-ins endnu</p>';
     return;
   }
-  document.getElementById('histContent').innerHTML = entries.slice(0, 40).map(e => {
+  document.getElementById('histContent').innerHTML = topHtml + entries.slice(0, 40).map(e => {
     const sc = calcEntryScore(e);
     const date = new Date(e.ts).toLocaleDateString('da-DK', {day:'numeric', month:'short'});
     const stateColor = e.state === 'Voksen' ? 'var(--green)' : 'var(--yellow)';
@@ -1210,13 +1295,198 @@ function showReminder(q) {
   document.getElementById('reminderQ').textContent = q;
   document.getElementById('reminderWrap').classList.add('show');
 }
-function closeReminder() { document.getElementById('reminderWrap').classList.remove('show'); }
+function closeReminder(ok) {
+  document.getElementById('reminderWrap').classList.remove('show');
+  if (!ok) showReminder(REMINDERS[remIndex % REMINDERS.length]);
+}
 
 // ---- TOAST ----
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---- IMPULS ----
+let imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+
+function openImpuls() {
+  imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+  document.getElementById('impulsOverlay').classList.add('show');
+  renderImpuls();
+}
+
+function closeImpuls() {
+  document.getElementById('impulsOverlay').classList.remove('show');
+}
+
+function renderImpuls() {
+  const el = document.getElementById('impulsContent');
+
+  if (imp.stopped === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Hvad handler impulsen om?</div>
+        <textarea id="impText" placeholder="Skriv kort..." rows="3" oninput="imp.text=this.value">${imp.text}</textarea>
+        <div class="card-title" style="margin-top:20px; font-size:16px;">Hvad skete der?</div>
+        <div class="big-btn-grid" style="margin-top:8px;">
+          <button class="big-btn on-green" onclick="imp.stopped=true; renderImpuls();" style="padding:20px 10px;">
+            ✋<br><span style="font-size:13px; margin-top:6px; display:block;">Standsede op</span>
+          </button>
+          <button class="big-btn on-yellow" onclick="imp.stopped=false; renderImpuls();" style="padding:20px 10px;">
+            ➡️<br><span style="font-size:13px; margin-top:6px; display:block;">Fik ikke standset op</span>
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (imp.type === null) {
+    const stoppedHtml = imp.stopped
+      ? `<div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:14px;">✋ Standsede op · +15 point</div>`
+      : `<div style="background:rgba(245,158,11,0.1); border-radius:12px; padding:10px 14px; color:var(--yellow); font-weight:700; margin-bottom:14px;">➡️ Fik ikke standset op</div>`;
+    el.innerHTML = `
+      <div class="card">
+        ${stoppedHtml}
+        <div class="card-title">Hvad er impulsen?</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+          <button class="big-btn" onclick="imp.type='vigtigt'; renderImpuls();" style="text-align:left; padding:16px 18px;">⭐ Vigtigt</button>
+          <button class="big-btn" onclick="imp.type='akut'; renderImpuls();" style="text-align:left; padding:16px 18px;">🚨 Akut</button>
+          <button class="big-btn" onclick="imp.type='impuls'; renderImpuls();" style="text-align:left; padding:16px 18px;">💭 Blot en impuls</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.stopped=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.type === 'impuls') {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Blot en impuls</div>
+        <div class="card-sub">"${imp.text || '...'}"</div>
+        <button class="btn-primary" style="background:var(--green);" onclick="saveImpuls(true)">💾 Gem til "Ugens impulser"</button>
+        <button class="btn-secondary" onclick="saveImpuls(false)">🗑 Kassér</button>
+        <button class="btn-secondary" onclick="imp.type=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  // Vigtigt / Akut — tre spørgsmål
+  if (imp.forMig === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Vigtig for mig?</div>
+        <div class="yesno-row">
+          <button class="yn-btn yes" onclick="imp.forMig=true; renderImpuls();">Ja</button>
+          <button class="yn-btn no"  onclick="imp.forMig=false; renderImpuls();">Nej</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.type=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.forPartner === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Vigtig for min partner?</div>
+        <div class="yesno-row">
+          <button class="yn-btn yes" onclick="imp.forPartner=true; renderImpuls();">Ja</button>
+          <button class="yn-btn no"  onclick="imp.forPartner=false; renderImpuls();">Nej</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.forMig=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.partnerNu === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Har min partner brug for infoen lige nu?</div>
+        <div class="yesno-row">
+          <button class="yn-btn yes" onclick="imp.partnerNu=true; renderImpuls();">Ja</button>
+          <button class="yn-btn no"  onclick="imp.partnerNu=false; renderImpuls();">Nej</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.forPartner=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (!imp.partnerNu) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Sæt en påmindelse</div>
+        <div class="card-sub">Hvornår vil du vende tilbage til det?</div>
+        <div class="timer-unit-row">
+          <button class="timer-unit-btn ${imp.timerUnit==='timer' ? 'on' : ''}" onclick="imp.timerUnit='timer'; imp.timerVal=Math.min(imp.timerVal,24); renderImpuls();">Timer</button>
+          <button class="timer-unit-btn ${imp.timerUnit==='dage' ? 'on' : ''}" onclick="imp.timerUnit='dage'; imp.timerVal=Math.min(imp.timerVal,30); renderImpuls();">Dage</button>
+        </div>
+        <div class="timer-row">
+          <button class="timer-btn" onclick="imp.timerVal=Math.max(1,imp.timerVal-1); renderImpuls();">−</button>
+          <div class="timer-val">${imp.timerVal}</div>
+          <button class="timer-btn" onclick="imp.timerVal=Math.min(imp.timerUnit==='timer'?24:30, imp.timerVal+1); renderImpuls();">+</button>
+        </div>
+        <div style="text-align:center; color:var(--muted); font-size:14px; margin-bottom:8px;">Om ${imp.timerVal} ${imp.timerUnit}</div>
+        <button class="btn-primary" onclick="saveImpuls(true)">💾 Gem med påmindelse</button>
+        <button class="btn-secondary" onclick="imp.partnerNu=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  // partnerNu = true — gem direkte
+  el.innerHTML = `
+    <div class="card" style="text-align:center; padding:30px 20px;">
+      <div style="font-size:48px; margin-bottom:12px;">📌</div>
+      <div class="card-title">Klar til at handle</div>
+      <div class="card-sub">"${imp.text || '...'}"</div>
+      <button class="btn-primary" onclick="saveImpuls(true)">💾 Gem</button>
+      <button class="btn-secondary" onclick="imp.partnerNu=null; renderImpuls();">← Tilbage</button>
+    </div>`;
+}
+
+function saveImpuls(keep) {
+  const d = getData();
+  if (!d.impulses) d.impulses = [];
+  const timerMs = imp.timerUnit === 'timer'
+    ? imp.timerVal * 60 * 60 * 1000
+    : imp.timerVal * 24 * 60 * 60 * 1000;
+  const entry = {
+    text: imp.text,
+    stopped: imp.stopped,
+    type: imp.type,
+    forMig: imp.forMig,
+    forPartner: imp.forPartner,
+    partnerNu: imp.partnerNu,
+    timerTarget: (!imp.partnerNu && imp.type !== 'impuls') ? Date.now() + timerMs : null,
+    timerLabel: `${imp.timerVal} ${imp.timerUnit}`,
+    kept: keep,
+    date: todayKey(),
+    week: getWeekKey(),
+    ts: Date.now()
+  };
+  if (keep) d.impulses.push(entry);
+
+  // +15 point for stopping
+  if (imp.stopped) {
+    if (!d.impulsScore) d.impulsScore = {};
+    d.impulsScore[todayKey()] = (d.impulsScore[todayKey()] || 0) + 15;
+  }
+  setData(d);
+  closeImpuls();
+  if (currentView === 'home') renderHome();
+  showToast(keep ? '💡 Gemt!' : '🗑 Kasseret');
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay() + 1);
+  return start.toISOString().slice(0,10);
+}
+
+function getImpulsScore() {
+  const d = getData();
+  if (!d.impulsScore) return 0;
+  return (d.impulsScore[todayKey()] || 0);
 }
 
 renderHome();
