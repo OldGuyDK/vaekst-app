@@ -295,12 +295,34 @@
     }
     .impuls-fab:active { transform: scale(0.93); }
 
+    .omsorg-fab {
+      position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+      width: 62px; height: 62px; border-radius: 50%;
+      background: var(--primary); color: #fff; border: none;
+      font-size: 10px; font-weight: 800; cursor: pointer; z-index: 200;
+      box-shadow: 0 4px 24px rgba(59,130,246,0.55);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1px; transition: transform 0.1s; font-family: inherit;
+    }
+    .omsorg-fab:active { transform: translateX(-50%) scale(0.93); }
+
     /* IMPULS OVERLAY */
     .impuls-overlay {
       display: none; position: fixed; inset: 0;
       background: #08081a; z-index: 500; overflow-y: auto; padding: 20px 16px 40px;
     }
     .impuls-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+
+    /* GRIB OVERLAY */
+    .grib-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #080c1a; z-index: 500; overflow-y: auto; padding: 20px 16px 48px;
+    }
+    .grib-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+    .grib-section { margin-bottom: 24px; }
+    .grib-heading { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+    .grib-body { font-size: 15px; color: var(--text); line-height: 1.6; }
+    .grib-quote { font-style: italic; color: var(--muted); font-size: 14px; margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--primary); }
 
     /* TIMER */
     .timer-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
@@ -414,6 +436,50 @@
   <div id="impulsContent"></div>
 </div>
 
+<!-- OMSORG OVERLAY -->
+<div class="grib-overlay" id="gribOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:var(--primary);">🤝 OMSORG</div>
+    <button class="close-x" onclick="closeGrib()">✕</button>
+  </div>
+  <div style="padding:12px 16px; border-radius:12px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); margin-bottom:20px; font-size:15px; font-weight:700; color:var(--primary); text-align:center;">
+    💙 Husk du taler med hendes indre barn
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Lyt</div>
+    <div class="grib-body">Ikke for at svare. Ikke for at forklare. Lyt efter hvad hun faktisk sidder med.</div>
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Parkér dig selv</div>
+    <div class="grib-body">Dine intentioner, forklaringer, skyldfølelse, uro og behov for at blive forstået må vente.</div>
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Spørg ind til følelsen</div>
+    <div class="grib-quote">"Hvad gjorde det ved dig?"</div>
+    <div class="grib-quote">"Hvor ramte det dig mest?"</div>
+  </div>
+  <div style="padding:12px 16px; border-radius:12px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); margin-bottom:20px; font-size:15px; font-weight:700; color:var(--primary); text-align:center;">
+    💙 Husk du taler med hendes indre barn
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Ræk ud konkret</div>
+    <div class="grib-quote">"Vil du have, jeg holder om dig?"</div>
+    <div class="grib-quote">"Skal jeg bare sidde her med dig?"</div>
+    <div class="grib-quote">"Vil du have min hånd?"</div>
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Skab ro til sidst</div>
+    <div class="grib-quote">"Jeg er her. Du skal ikke stå alene med det."</div>
+    <div class="grib-quote">"Tak fordi du sagde det. Jeg tager det alvorligt."</div>
+  </div>
+</div>
+
+<!-- OMSORG FAB -->
+<button class="omsorg-fab" onclick="openGrib()">
+  <span style="font-size:22px;">🤝</span>
+  <span>OMSORG</span>
+</button>
+
 <!-- IMPULS FAB -->
 <button class="impuls-fab" onclick="openImpuls()">
   <span style="font-size:22px;">💡</span>
@@ -446,12 +512,13 @@
   </div>
   <div class="card" id="homeStopCard"></div>
   <div class="card" id="homeSessionCard"></div>
+  <div class="card" id="homeRemindersCard"></div>
+  <div class="card" id="homeInitiativCard"></div>
   <div class="card" id="homeDailyCard">
     <div class="card-title">Dagsoversigt</div>
     <div id="homeDailyContent"></div>
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
-  <div class="card" id="homeInitiativCard"></div>
   <div id="homeScore"></div>
 </div>
 
@@ -481,14 +548,8 @@
     <div class="chip-grid" id="herDailyGrid"></div>
   </div>
   <div class="card">
-    <div class="card-title">Refleksion til GPT</div>
-    <div class="card-sub">Skriv hvad du vil dele — sendes direkte til din coach</div>
-    <textarea id="dailyNote" placeholder="Hvad vil du reflektere over?..." rows="4" oninput="updateDailyGptLink()"></textarea>
-    <div id="dailyStikord"></div>
-    <a id="dailyGptBtn" href="#" target="_blank" class="gpt-btn">
-      <span class="gpt-icon">🤖</span>
-      <div><div>Del med GPT</div><div class="gpt-sub">Åbner ChatGPT med din besked</div></div>
-    </a>
+    <div class="card-title">Planlægning</div>
+    <div id="planningChecks"></div>
   </div>
   <button class="btn-primary" onclick="saveDailyAction()">💾 Gem dagsoversigt</button>
 </div>
@@ -532,7 +593,8 @@ const S_ICONS  = ['🌅','☀️','🌤️','🌆','🌙'];
 
 const OBSERVATIONS = [
   'Lukket','Fjern','Overskud','Kommunikerende','Åben',
-  'Øjenkontakt','Imødekommende','Hård stemmeføring','Let stemmeføring','Glad'
+  'Øjenkontakt','Imødekommende','Hård stemmeføring','Let stemmeføring','Glad',
+  'Stille','Blid','Vred'
 ];
 
 // Responses with scores
@@ -555,7 +617,12 @@ const OUTCOMES = [
 ];
 
 // Initiative (tracking only, no score)
-const INITIATIVES = ['Følelsesmæssig tilgængelig', 'Uopfordret initiativ'];
+const INITIATIVES = [
+  { label: 'Selv tage fat om et følsomt emne' },
+  { label: 'Uselvisk, uopfordret initiativ' },
+  { label: 'Tilbyde min assistance', script: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
+  { label: 'Tage lead på eget initiativ', script: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
+];
 
 // Internal state (single select, no score — tracking only)
 const MY_STATES = ['Voksen','Barn'];
@@ -730,9 +797,12 @@ function renderHome() {
     </button>
     <div class="dropdown-list" id="initDropdown">
       ${INITIATIVES.map(iv => `
-        <div class="dropdown-opt ${homeInits.includes(iv) ? 'on' : ''}" onclick="toggleHomeInit('${iv}')">
-          <div class="dropdown-opt-circle">${homeInits.includes(iv) ? '✓' : ''}</div>
-          <span>${iv}</span>
+        <div class="dropdown-opt ${homeInits.includes(iv.label) ? 'on' : ''}" onclick="toggleHomeInit('${iv.label}')">
+          <div class="dropdown-opt-circle">${homeInits.includes(iv.label) ? '✓' : ''}</div>
+          <div>
+            <div>${iv.label}</div>
+            ${iv.script ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;white-space:pre-line;line-height:1.5;">${iv.script}</div>` : ''}
+          </div>
         </div>`).join('')}
     </div>
     <div style="margin-top:10px;">
@@ -745,22 +815,15 @@ function renderHome() {
   const sc = getStopCounts();
   document.getElementById('homeStopCard').innerHTML = `
     <div class="card-title">💪 Impulskontrol</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-      <div style="text-align:center;padding:12px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">✋ Standsede — i dag</div>
-        <div style="font-size:30px;font-weight:800;color:var(--green);">${sc.todayStopped}</div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;margin-bottom:4px;">dag &nbsp;–&nbsp; uge</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">✋ Standsede</div>
+        <div style="font-size:24px;font-weight:800;color:var(--green);">${sc.todayStopped} <span style="color:var(--muted);font-size:16px;">–</span> ${sc.weekStopped}</div>
       </div>
-      <div style="text-align:center;padding:12px 6px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke — i dag</div>
-        <div style="font-size:30px;font-weight:800;color:var(--red);">${sc.todayNotStopped}</div>
-      </div>
-      <div style="text-align:center;padding:12px 6px;background:rgba(16,185,129,0.05);border-radius:12px;border:1px solid rgba(16,185,129,0.15);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">✋ Standsede — uge</div>
-        <div style="font-size:30px;font-weight:800;color:var(--green);">${sc.weekStopped}</div>
-      </div>
-      <div style="text-align:center;padding:12px 6px;background:rgba(239,68,68,0.05);border-radius:12px;border:1px solid rgba(239,68,68,0.15);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke — uge</div>
-        <div style="font-size:30px;font-weight:800;color:var(--red);">${sc.weekNotStopped}</div>
+      <div style="text-align:center;padding:10px 6px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke</div>
+        <div style="font-size:24px;font-weight:800;color:var(--red);">${sc.todayNotStopped} <span style="color:var(--muted);font-size:16px;">–</span> ${sc.weekNotStopped}</div>
       </div>
     </div>
   `;
@@ -786,6 +849,83 @@ function renderHome() {
   } else {
     document.getElementById('homeDailyContent').innerHTML = '<p style="color:var(--muted); font-size:14px;">Ikke udfyldt endnu</p>';
   }
+
+  // Reminders
+  const rems = getTodayReminders();
+  document.getElementById('homeRemindersCard').innerHTML = `
+    <div class="card-title">⏰ Dagens reminders</div>
+    ${rems.length ? rems.map(r => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div onclick="toggleReminderDone(${r.id})" style="width:22px;height:22px;border-radius:50%;border:2px solid ${r.done?'var(--green)':'var(--border)'};background:${r.done?'rgba(16,185,129,0.15)':'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;">${r.done?'✓':''}</div>
+        <div style="flex:1;${r.done?'opacity:0.45;text-decoration:line-through;':''}">
+          <div style="font-size:14px;font-weight:600;">${r.text}</div>
+          ${r.time?`<div style="font-size:12px;color:var(--muted);">⏰ ${r.time}</div>`:''}
+        </div>
+        <button onclick="deleteReminder(${r.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 6px;">✕</button>
+      </div>`).join('') : '<p style="color:var(--muted);font-size:14px;margin-bottom:8px;">Ingen reminders endnu</p>'}
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+      <input id="newRemText" type="text" placeholder="Stikord..." style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
+      <input id="newRemTime" type="time" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;width:110px;">
+      <button onclick="addReminder()" style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:24px;cursor:pointer;flex-shrink:0;line-height:1;">+</button>
+    </div>
+  `;
+}
+
+// ---- REMINDERS ----
+const _notifiedRems = new Set();
+let _todayRems = null;
+
+function getTodayReminders() {
+  if (_todayRems === null) {
+    _todayRems = (getData().reminders || []).filter(r => r.date === todayKey());
+  }
+  return _todayRems;
+}
+
+function saveReminders() {
+  const d = getData();
+  const others = (d.reminders || []).filter(r => r.date !== todayKey());
+  d.reminders = [...others, ..._todayRems];
+  setData(d);
+}
+
+function addReminder() {
+  const text = document.getElementById('newRemText').value.trim();
+  const time = document.getElementById('newRemTime').value;
+  if (!text && !time) return;
+  getTodayReminders().push({ id: Date.now(), text: text || '–', time, date: todayKey(), done: false });
+  saveReminders();
+  renderHome();
+}
+
+function deleteReminder(id) {
+  _todayRems = getTodayReminders().filter(r => r.id !== id);
+  saveReminders();
+  renderHome();
+}
+
+function toggleReminderDone(id) {
+  getTodayReminders().forEach(r => { if (r.id === id) r.done = !r.done; });
+  saveReminders();
+  renderHome();
+}
+
+function checkReminderAlarms() {
+  const now = new Date();
+  const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  getTodayReminders().forEach(r => {
+    if (r.time === hhmm && !r.done && !_notifiedRems.has(r.id)) {
+      _notifiedRems.add(r.id);
+      showToast('⏰ ' + r.text);
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification('Vækst reminder', { body: r.text });
+      }
+    }
+  });
+}
+setInterval(checkReminderAlarms, 30000);
+if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+  Notification.requestPermission();
 }
 
 // ---- CHECK-IN ----
@@ -927,7 +1067,7 @@ function renderCiStep() {
         <div class="card-sub" style="margin-bottom:8px;">Initiativ — vælg alt der passer</div>
         <div class="chip-grid">
           ${INITIATIVES.map(iv => `
-            <button class="chip ${ci.initiatives.includes(iv) ? 'on' : ''}" onclick="toggleInitiative('${iv}')">${iv}</button>`
+            <button class="chip ${ci.initiatives.includes(iv.label) ? 'on' : ''}" onclick="toggleInitiative('${iv.label}')">${iv.label}</button>`
           ).join('')}
         </div>
         <button class="btn-primary" ${!ci.state ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
@@ -1035,30 +1175,42 @@ function saveCiEntry() {
 // ---- DAILY ----
 let tempDaily = {};
 
+const PLANNING_ITEMS = [
+  'Er der styr på kalender',
+  'Er der styr på aftaler',
+  'Er de næste dages aktiviteter planlagt',
+];
+
 function renderDaily() {
   const existing = getDailies()[todayKey()] || {};
-  tempDaily = { myStates: [...(existing.myStates || [])], herStates: [...(existing.herStates || [])], note: existing.note || '' };
-  _stikordCtx = `Dagsoversigt: Min tilstand: ${tempDaily.myStates.join(', ')||'?'}. Hendes tilstand: ${tempDaily.herStates.join(', ')||'?'}.`;
+  tempDaily = { myStates: [...(existing.myStates || [])], herStates: [...(existing.herStates || [])], planning: [...(existing.planning || [])] };
 
   document.getElementById('myDailyGrid').innerHTML = MY_DAILY.map(s => {
     const isOn = tempDaily.myStates.includes(s.label);
     const cls = s.score > 0 ? 'chip pos' : 'chip neg';
-    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleMyState('${s.label}')">
-      ${s.score > 0 ? '✚' : '−'} ${s.label}
-    </button>`;
+    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleMyState('${s.label}')">${s.score > 0 ? '✚' : '−'} ${s.label}</button>`;
   }).join('');
 
   document.getElementById('herDailyGrid').innerHTML = HER_DAILY.map(s => {
     const isOn = tempDaily.herStates.includes(s.label);
     const cls = s.score > 0 ? 'chip pos' : 'chip neg';
-    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleHerState('${s.label}')">
-      ${s.score > 0 ? '✚' : '−'} ${s.label}
-    </button>`;
+    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleHerState('${s.label}')">${s.score > 0 ? '✚' : '−'} ${s.label}</button>`;
   }).join('');
 
-  document.getElementById('dailyNote').value = tempDaily.note;
-  document.getElementById('dailyStikord').innerHTML = stikordHtml('dailyNote');
-  updateDailyGptLink();
+  document.getElementById('planningChecks').innerHTML = PLANNING_ITEMS.map(item => {
+    const checked = tempDaily.planning.includes(item);
+    return `
+      <div class="check-item ${checked ? 'done' : ''}" onclick="togglePlanning('${item}')" style="margin-bottom:8px;">
+        <div class="check-circle">${checked ? '✓' : ''}</div>
+        <div class="check-label">${item}</div>
+      </div>`;
+  }).join('');
+}
+
+function togglePlanning(item) {
+  const i = tempDaily.planning.indexOf(item);
+  if (i > -1) tempDaily.planning.splice(i, 1); else tempDaily.planning.push(item);
+  renderDaily();
 }
 
 function toggleMyState(s) {
@@ -1081,13 +1233,14 @@ function updateDailyGptLink() {
 }
 
 function saveDailyAction() {
-  const note = document.getElementById('dailyNote').value;
   const d = getData();
   if (!d.dailies) d.dailies = {};
-  d.dailies[todayKey()] = { ...tempDaily, note };
+  d.dailies[todayKey()] = { ...tempDaily };
   setData(d);
   showToast('Dagsoversigt gemt ✓');
 }
+
+function updateDailyGptLink() {}
 
 // ---- HISTORY ----
 function renderHistory() {
@@ -1297,6 +1450,10 @@ function renderChecklist() {
       html += q('Har hun bedt dig om at forklare dig?', s.bedt, bJa("setBedt('ja')") + bNej("setBedt('nej')"));
       if (s.bedt === 'nej') {
         html += warn('✋', 'Hun har ikke bedt om en forklaring', 'Du behøver ikke sige noget nu', '245,158,11');
+        html += `
+          <div style="padding:16px;border-radius:14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);margin-bottom:4px;">
+            <div style="font-size:15px;font-weight:700;color:var(--primary);margin-bottom:6px;">💙 Hvad kan du sige der møder hende i følelsen og kommunikerer at du tager ansvar?</div>
+          </div>`;
       }
 
       if (s.bedt === 'ja') {
@@ -1382,6 +1539,9 @@ function showToast(msg) {
 
 // ---- IMPULS ----
 let imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+
+function openGrib()  { document.getElementById('gribOverlay').classList.add('show'); }
+function closeGrib() { document.getElementById('gribOverlay').classList.remove('show'); }
 
 function openImpuls() {
   imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
