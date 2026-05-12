@@ -566,27 +566,32 @@
 <!-- GPT -->
 <div class="view" id="view-gpt">
   <div class="page-header">
-    <h1>Din GPT-coach</h1>
-    <p>Stærk og Handlekraftig</p>
+    <h1>GPT-coaches</h1>
+    <p>Vælg den der passer til situationen</p>
   </div>
-  <a href="https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig" target="_blank" class="gpt-btn" style="margin-top:0;">
-    <span class="gpt-icon">🤖</span>
-    <div><div>Åbn Stærk og Handlekraftig</div><div class="gpt-sub">Klik for at åbne ChatGPT</div></div>
+  <a href="https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig" target="_blank" class="gpt-btn" style="margin-top:0; background:linear-gradient(135deg,#c2410c,#ea580c,#fb923c);">
+    <span class="gpt-icon">💪</span>
+    <div><div>Stærk og Handlekraftig</div><div class="gpt-sub">Din personlige coach</div></div>
   </a>
-  <div class="card" style="margin-top:12px;">
-    <div class="card-title">Hurtig refleksion</div>
-    <div class="card-sub">Skriv en tanke — knappen sender den direkte med</div>
-    <textarea id="gptNote" placeholder="Hvad tænker du på lige nu?..." rows="5" oninput="updateGptLink()"></textarea>
-    <div id="gptStikord"></div>
-    <a id="gptSendBtn" href="#" target="_blank" class="gpt-btn">
-      <span class="gpt-icon">✉️</span>
-      <div><div>Send til GPT</div><div class="gpt-sub">Åbner ChatGPT med din besked</div></div>
-    </a>
-  </div>
+  <a href="https://chatgpt.com/g/g-6a03241336ec8191b447e5b0dc3faf17-besked-checker" target="_blank" class="gpt-btn" style="background:linear-gradient(135deg,#c2410c,#ea580c,#fb923c);">
+    <span class="gpt-icon">✅</span>
+    <div><div>Besked Checker</div><div class="gpt-sub">Tjek din besked inden du sender</div></div>
+  </a>
+  <a href="https://chatgpt.com/g/g-69f70c0bcdd88191adeff770d764679f-omsorg-eller-bullshit" target="_blank" class="gpt-btn" style="background:linear-gradient(135deg,#c2410c,#ea580c,#fb923c);">
+    <span class="gpt-icon">🔍</span>
+    <div><div>Omsorg eller Bullshit</div><div class="gpt-sub">Få et ærligt tjek på din tilgang</div></div>
+  </a>
 </div>
 
 <script>
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
+function openGPT(text) {
+  if (text) {
+    try { navigator.clipboard.writeText(text); } catch(e) {}
+    showToast('📋 Tekst kopieret — indsæt i GPT');
+  }
+  window.open(GPT, '_blank');
+}
 
 const SESSIONS = ['Morgen','Formiddag','Eftermiddag','Aften','Før sengetid'];
 const S_ICONS  = ['🌅','☀️','🌤️','🌆','🌙'];
@@ -1078,7 +1083,6 @@ function renderCiStep() {
     const entryScore = calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes });
     const summary = `[${ci.session}] Observerede: ${ci.obs.join(', ')}. Reaktion: ${ci.responses.join(', ')}. Udfald: ${ci.outcomes.join(', ')}. Initiativ: ${ci.initiatives.join(', ')||'–'}. Tilstand: ${ci.state}.`;
     _stikordCtx = summary;
-    const gptHref = GPT + '?q=' + encodeURIComponent(summary + '\n\nHvad tænker jeg om det?');
     body = `
       <div class="card">
         <div style="text-align:center; margin-bottom:16px;">
@@ -1089,10 +1093,10 @@ function renderCiStep() {
         <div class="card-sub">Valgfri — skriv hvad du vil dele med din GPT-coach</div>
         <textarea id="ciNote" placeholder="Hvad vil du tilføje?..." rows="4"></textarea>
         ${stikordHtml('ciNote')}
-        <a id="ciGptBtn" href="${gptHref}" target="_blank" class="gpt-btn" style="margin-top:12px;">
+        <button id="ciGptBtn" onclick="openGPT(document.getElementById('ciNote').value)" class="gpt-btn" style="margin-top:12px;width:100%;text-align:left;">
           <span class="gpt-icon">🤖</span>
-          <div><div>Del med GPT</div><div class="gpt-sub">Åbner ChatGPT</div></div>
-        </a>
+          <div><div>Del med GPT</div><div class="gpt-sub">Kopierer tekst og åbner ChatGPT</div></div>
+        </button>
         <button class="btn-primary" onclick="saveCiEntry()">💾 Gem check-in</button>
         <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
       </div>
@@ -1101,12 +1105,6 @@ function renderCiStep() {
 
   document.getElementById('ciContent').innerHTML = `<div class="step-row">${dots}</div>${body}`;
 
-  if (ci.step === 4) {
-    document.getElementById('ciNote').addEventListener('input', function() {
-      const summary = `[${ci.session}] Observerede: ${ci.obs.join(', ')}. Reaktion: ${ci.responses.join(', ')}. Udfald: ${ci.outcomes.join(', ')}. Tilstand: ${ci.state}.`;
-      document.getElementById('ciGptBtn').href = GPT + '?q=' + encodeURIComponent(summary + '\n\n' + this.value);
-    });
-  }
 }
 
 function toggleDropdown(id) {
@@ -1229,7 +1227,6 @@ function updateDailyGptLink() {
   const note = document.getElementById('dailyNote')?.value || '';
   const msg = `Dagsoversigt: Min tilstand var "${tempDaily.myStates.join(', ') || '?'}", hendes var "${tempDaily.herStates.join(', ') || '?'}".` + (note ? '\n\n' + note : '');
   const el = document.getElementById('dailyGptBtn');
-  if (el) el.href = GPT + '?q=' + encodeURIComponent(msg);
 }
 
 function saveDailyAction() {
@@ -1320,7 +1317,7 @@ function stikordHtml(noteElId) {
 }
 
 function sendStikord(keyword) {
-  window.open(GPT + '?q=' + encodeURIComponent(keyword), '_blank');
+  openGPT(keyword);
 }
 
 // ---- GPT ----
@@ -1332,7 +1329,7 @@ function renderGpt() {
 function updateGptLink() {
   const note = document.getElementById('gptNote')?.value || '';
   const el = document.getElementById('gptSendBtn');
-  if (el) el.href = note ? GPT + '?q=' + encodeURIComponent(note) : GPT;
+  if (el) { el.removeAttribute('href'); el.onclick = () => openGPT(note); }
 }
 
 // ---- PANIC ----
