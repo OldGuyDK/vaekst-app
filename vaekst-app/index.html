@@ -947,12 +947,33 @@ function toggleReminderDone(id) {
   renderHome();
 }
 
+function playAlarmBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (freq, start, dur) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.4, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + dur);
+    };
+    beep(880, 0,    0.18);
+    beep(880, 0.22, 0.18);
+    beep(1100, 0.5, 0.3);
+  } catch(e) {}
+}
+
 function checkReminderAlarms() {
   const now = new Date();
   const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
   getTodayReminders().forEach(r => {
     if (r.time === hhmm && !r.done && !_notifiedRems.has(r.id)) {
       _notifiedRems.add(r.id);
+      playAlarmBeep();
       showToast('⏰ ' + r.text);
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         new Notification('Vækst reminder', { body: r.text });
