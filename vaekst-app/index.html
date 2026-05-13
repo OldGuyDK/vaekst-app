@@ -475,25 +475,8 @@
   </div>
   <div class="card">
     <div class="card-title">Registrér adfærd</div>
-    <div class="card-sub">Tæl én ad gangen — klik for at registrere</div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="recordAdfaerd('naervaerende',20)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--green);background:rgba(16,185,129,0.1);color:var(--green);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
-        🟢 Nærværende og spurgte ind &nbsp;<span style="font-weight:400;font-size:13px;">+20 point</span>
-      </button>
-      <button onclick="recordAdfaerd('lyttende',-10)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--yellow);background:rgba(245,158,11,0.1);color:var(--yellow);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
-        🟡 Lyttende men passiv &nbsp;<span style="font-weight:400;font-size:13px;">−10 point</span>
-      </button>
-      <button onclick="recordAdfaerd('lukket',-30)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--red);background:rgba(239,68,68,0.1);color:var(--red);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
-        🔴 Lukkede ned i samtale &nbsp;<span style="font-weight:400;font-size:13px;">−30 point</span>
-      </button>
-      <button onclick="recordAdfaerd('voksen',0)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--primary);background:rgba(59,130,246,0.1);color:var(--primary);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
-        🔵 Voksen reaktion &nbsp;<span style="font-weight:400;font-size:13px;">tæller antal</span>
-      </button>
-      <button onclick="recordAdfaerd('indreBarn',0)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--muted);background:rgba(100,116,139,0.1);color:var(--muted);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
-        ⚪ Indre barn reaktion &nbsp;<span style="font-weight:400;font-size:13px;">tæller antal</span>
-      </button>
-    </div>
-    <div id="adfaerdToast" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.15);color:var(--green);font-weight:700;font-size:14px;text-align:center;"></div>
+    <div class="card-sub">Klik for at registrere — klik igen for at fortryde</div>
+    <div id="adfaerdBtns" style="display:flex;flex-direction:column;gap:10px;"></div>
   </div>
 </div>
 
@@ -1766,19 +1749,47 @@ function _getAdfaerd() {
   return _adfaerd;
 }
 
+const ADFAERD_TYPES = [
+  { type: 'naervaerende', score: 20,  label: '🟢 Nærværende og spurgte ind', scoreLabel: '+20 point',     rgb: '16,185,129' },
+  { type: 'lyttende',     score: -10, label: '🟡 Lyttende men passiv',        scoreLabel: '−10 point',    rgb: '245,158,11' },
+  { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',      scoreLabel: '−30 point',    rgb: '239,68,68' },
+  { type: 'voksen',       score: 0,   label: '🔵 Voksen reaktion',            scoreLabel: 'tæller antal', rgb: '59,130,246' },
+  { type: 'indreBarn',    score: 0,   label: '⚪ Indre barn reaktion',         scoreLabel: 'tæller antal', rgb: '100,116,139' },
+];
+
+let _adfaerdSession = {};
+
 function openAdfaerd() {
+  _adfaerdSession = {};
   document.getElementById('adfaerdOverlay').classList.add('show');
-  document.getElementById('adfaerdToast').style.display = 'none';
+  renderAdfaerdBtns();
 }
 function closeAdfaerd() { document.getElementById('adfaerdOverlay').classList.remove('show'); }
 
-function recordAdfaerd(type, score) {
-  _getAdfaerd().push({ date: todayKey(), week: getWeekKey(), type, score, ts: Date.now() });
+function renderAdfaerdBtns() {
+  document.getElementById('adfaerdBtns').innerHTML = ADFAERD_TYPES.map(t => {
+    const on = !!_adfaerdSession[t.type];
+    const bg = on ? `rgba(${t.rgb},0.85)` : `rgba(${t.rgb},0.1)`;
+    const col = on ? '#fff' : `rgba(${t.rgb},1)`;
+    return `<button onclick="toggleAdfaerd('${t.type}',${t.score})" style="padding:14px 16px;border-radius:14px;border:2px solid rgba(${t.rgb},1);background:${bg};color:${col};font-weight:700;font-size:15px;cursor:pointer;text-align:left;width:100%;font-family:inherit;transition:background 0.15s,color 0.15s;">
+      ${t.label} &nbsp;<span style="font-weight:400;font-size:13px;">${t.scoreLabel}</span>
+    </button>`;
+  }).join('');
+}
+
+function toggleAdfaerd(type, score) {
+  if (_adfaerdSession[type]) {
+    const arr = _getAdfaerd();
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (arr[i].type === type && arr[i].date === todayKey()) { arr.splice(i, 1); break; }
+    }
+    _adfaerdSession[type] = false;
+  } else {
+    _getAdfaerd().push({ date: todayKey(), week: getWeekKey(), type, score, ts: Date.now() });
+    _adfaerdSession[type] = true;
+  }
   const d = getData(); d.adfaerd = _adfaerd; setData(d);
-  const labels = { naervaerende: 'Nærværende', lyttende: 'Lyttende', lukket: 'Lukket ned', voksen: 'Voksen', indreBarn: 'Indre barn' };
-  const toast = document.getElementById('adfaerdToast');
-  toast.textContent = '✓ ' + labels[type] + ' registreret';
-  toast.style.display = 'block';
+  renderAdfaerdBtns();
   renderHome();
 }
 
