@@ -283,28 +283,21 @@
     }
     .stikord-btn:active { background: rgba(139,92,246,0.3); }
 
-    /* IMPULS FAB */
-    .impuls-fab {
-      position: fixed; bottom: 72px; left: 16px;
-      width: 62px; height: 62px; border-radius: 50%;
-      background: #8b5cf6; color: #fff; border: none;
-      font-size: 10px; font-weight: 800; cursor: pointer; z-index: 200;
-      box-shadow: 0 4px 24px rgba(139,92,246,0.55);
+    /* FAB BAR */
+    .fab-bar {
+      position: fixed; bottom: 72px; left: 0; right: 0;
+      display: flex; justify-content: space-evenly; align-items: center;
+      pointer-events: none; z-index: 200;
+    }
+    .fab {
+      width: 58px; height: 58px; border-radius: 50%;
+      color: #fff; border: none;
+      font-size: 10px; font-weight: 800; cursor: pointer;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 1px; transition: transform 0.1s; font-family: inherit;
+      pointer-events: all;
     }
-    .impuls-fab:active { transform: scale(0.93); }
-
-    .omsorg-fab {
-      position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
-      width: 62px; height: 62px; border-radius: 50%;
-      background: var(--primary); color: #fff; border: none;
-      font-size: 10px; font-weight: 800; cursor: pointer; z-index: 200;
-      box-shadow: 0 4px 24px rgba(59,130,246,0.55);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 1px; transition: transform 0.1s; font-family: inherit;
-    }
-    .omsorg-fab:active { transform: translateX(-50%) scale(0.93); }
+    .fab:active { transform: scale(0.93); }
 
     /* IMPULS OVERLAY */
     .impuls-overlay {
@@ -474,23 +467,51 @@
   </div>
 </div>
 
-<!-- OMSORG FAB -->
-<button class="omsorg-fab" onclick="openGrib()">
-  <span style="font-size:22px;">🤝</span>
-  <span>OMSORG</span>
-</button>
+<!-- ADFÆRD OVERLAY -->
+<div class="panic-overlay" id="adfaerdOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:var(--green);">🎯 Adfærd</div>
+    <button class="close-x" onclick="closeAdfaerd()">✕</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Registrér adfærd</div>
+    <div class="card-sub">Tæl én ad gangen — klik for at registrere</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="recordAdfaerd('naervaerende',20)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--green);background:rgba(16,185,129,0.1);color:var(--green);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
+        🟢 Nærværende og spurgte ind &nbsp;<span style="font-weight:400;font-size:13px;">+20 point</span>
+      </button>
+      <button onclick="recordAdfaerd('lyttende',-10)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--yellow);background:rgba(245,158,11,0.1);color:var(--yellow);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
+        🟡 Lyttende men passiv &nbsp;<span style="font-weight:400;font-size:13px;">−10 point</span>
+      </button>
+      <button onclick="recordAdfaerd('lukket',-30)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--red);background:rgba(239,68,68,0.1);color:var(--red);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
+        🔴 Lukkede ned i samtale &nbsp;<span style="font-weight:400;font-size:13px;">−30 point</span>
+      </button>
+      <button onclick="recordAdfaerd('voksen',0)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--primary);background:rgba(59,130,246,0.1);color:var(--primary);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
+        🔵 Voksen reaktion &nbsp;<span style="font-weight:400;font-size:13px;">tæller antal</span>
+      </button>
+      <button onclick="recordAdfaerd('indreBarn',0)" style="padding:14px 16px;border-radius:14px;border:2px solid var(--muted);background:rgba(100,116,139,0.1);color:var(--muted);font-weight:700;font-size:15px;cursor:pointer;text-align:left;">
+        ⚪ Indre barn reaktion &nbsp;<span style="font-weight:400;font-size:13px;">tæller antal</span>
+      </button>
+    </div>
+    <div id="adfaerdToast" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.15);color:var(--green);font-weight:700;font-size:14px;text-align:center;"></div>
+  </div>
+</div>
 
-<!-- IMPULS FAB -->
-<button class="impuls-fab" onclick="openImpuls()">
-  <span style="font-size:22px;">💡</span>
-  <span>IMPULS</span>
-</button>
-
-<!-- PANIC FAB -->
-<button class="panic-fab" onclick="openPanic()">
-  <span style="font-size:22px;">🆘</span>
-  <span>PANIK</span>
-</button>
+<!-- FAB BAR -->
+<div class="fab-bar">
+  <button class="fab" style="background:#8b5cf6;box-shadow:0 4px 20px rgba(139,92,246,0.5);" onclick="openImpuls()">
+    <span style="font-size:20px;">💡</span><span>IMPULS</span>
+  </button>
+  <button class="fab" style="background:var(--primary);box-shadow:0 4px 20px rgba(59,130,246,0.5);" onclick="openGrib()">
+    <span style="font-size:20px;">🤝</span><span>OMSORG</span>
+  </button>
+  <button class="fab" style="background:var(--green);box-shadow:0 4px 20px rgba(16,185,129,0.5);" onclick="openAdfaerd()">
+    <span style="font-size:20px;">🎯</span><span>ADFÆRD</span>
+  </button>
+  <button class="fab" style="background:var(--red);box-shadow:0 4px 20px rgba(239,68,68,0.5);" onclick="openPanic()">
+    <span style="font-size:20px;">🆘</span><span>PANIK</span>
+  </button>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -510,7 +531,6 @@
     <h1 id="homeGreet">God dag 👋</h1>
     <p id="homeDate"></p>
   </div>
-  <div class="card" id="homeStopCard"></div>
   <div class="card" id="homeSessionCard"></div>
   <div class="card" id="homeRemindersCard"></div>
   <div class="card" id="homeInitiativCard"></div>
@@ -519,6 +539,7 @@
     <div id="homeDailyContent"></div>
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
+  <div class="card" id="homeStopCard"></div>
   <div id="homeScore"></div>
 </div>
 
@@ -710,7 +731,7 @@ function calcTodayTotal() {
   const entries = getEntries().filter(e => e.date === today);
   const ciScore = entries.reduce((sum, e) => sum + calcEntryScore(e), 0);
   const daily = getDailies()[today];
-  return ciScore + calcDailyScore(daily) + getImpulsScore();
+  return ciScore + calcDailyScore(daily) + getImpulsScore() + getAdfaerdScore();
 }
 
 function scoreStyle(score) {
@@ -818,17 +839,45 @@ function renderHome() {
   `;
 
   const sc = getStopCounts();
+  const ac = getAdfaerdCounts();
+  const sep = `<span style="color:var(--muted);font-size:14px;font-weight:400;"> – </span>`;
   document.getElementById('homeStopCard').innerHTML = `
-    <div class="card-title">💪 Impulskontrol</div>
-    <div style="font-size:11px;color:var(--muted);text-align:right;margin-bottom:4px;">dag &nbsp;–&nbsp; uge</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div class="card-title">💪 Impuls og adfærdskontrol</div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;margin-bottom:6px;">dag &nbsp;–&nbsp; uge</div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">IMPULSER</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">✋ Standsede</div>
-        <div style="font-size:24px;font-weight:800;color:var(--green);">${sc.todayStopped} <span style="color:var(--muted);font-size:16px;">–</span> ${sc.weekStopped}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green);">${sc.todayStopped}${sep}${sc.weekStopped}</div>
       </div>
       <div style="text-align:center;padding:10px 6px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke</div>
-        <div style="font-size:24px;font-weight:800;color:var(--red);">${sc.todayNotStopped} <span style="color:var(--muted);font-size:16px;">–</span> ${sc.weekNotStopped}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--red);">${sc.todayNotStopped}${sep}${sc.weekNotStopped}</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">ADFÆRD</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🟢 Nærværende</span>
+        <span style="font-size:16px;font-weight:800;color:var(--green);">${ac.naervaerende.d}${sep}${ac.naervaerende.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(245,158,11,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🟡 Lyttende passiv</span>
+        <span style="font-size:16px;font-weight:800;color:var(--yellow);">${ac.lyttende.d}${sep}${ac.lyttende.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🔴 Lukket ned</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lukket.d}${sep}${ac.lukket.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(59,130,246,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🔵 Voksen</span>
+        <span style="font-size:16px;font-weight:800;color:var(--primary);">${ac.voksen.d}${sep}${ac.voksen.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(100,116,139,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">⚪ Indre barn</span>
+        <span style="font-size:16px;font-weight:800;color:var(--muted);">${ac.indreBarn.d}${sep}${ac.indreBarn.w}</span>
       </div>
     </div>
   `;
@@ -1709,6 +1758,46 @@ let _stops = null;
 function _getStops() {
   if (_stops === null) _stops = getData().stops || [];
   return _stops;
+}
+
+let _adfaerd = null;
+function _getAdfaerd() {
+  if (_adfaerd === null) _adfaerd = getData().adfaerd || [];
+  return _adfaerd;
+}
+
+function openAdfaerd() {
+  document.getElementById('adfaerdOverlay').classList.add('show');
+  document.getElementById('adfaerdToast').style.display = 'none';
+}
+function closeAdfaerd() { document.getElementById('adfaerdOverlay').classList.remove('show'); }
+
+function recordAdfaerd(type, score) {
+  _getAdfaerd().push({ date: todayKey(), week: getWeekKey(), type, score, ts: Date.now() });
+  const d = getData(); d.adfaerd = _adfaerd; setData(d);
+  const labels = { naervaerende: 'Nærværende', lyttende: 'Lyttende', lukket: 'Lukket ned', voksen: 'Voksen', indreBarn: 'Indre barn' };
+  const toast = document.getElementById('adfaerdToast');
+  toast.textContent = '✓ ' + labels[type] + ' registreret';
+  toast.style.display = 'block';
+  renderHome();
+}
+
+function getAdfaerdCounts() {
+  const a = _getAdfaerd();
+  const today = todayKey(), week = getWeekKey();
+  const count = (type, period) => a.filter(x => x.type === type && x[period === 'd' ? 'date' : 'week'] === (period === 'd' ? today : week)).length;
+  return {
+    naervaerende: { d: count('naervaerende','d'), w: count('naervaerende','w') },
+    lyttende:     { d: count('lyttende','d'),     w: count('lyttende','w') },
+    lukket:       { d: count('lukket','d'),        w: count('lukket','w') },
+    voksen:       { d: count('voksen','d'),        w: count('voksen','w') },
+    indreBarn:    { d: count('indreBarn','d'),     w: count('indreBarn','w') },
+  };
+}
+
+function getAdfaerdScore() {
+  const today = todayKey();
+  return _getAdfaerd().filter(x => x.date === today).reduce((sum, x) => sum + (x.score || 0), 0);
 }
 
 function recordStop(didStop) {
