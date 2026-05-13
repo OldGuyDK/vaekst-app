@@ -731,7 +731,7 @@ function goTo(name, session) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('nb-' + name).classList.add('active');
-  const renders = { home: renderHome, checkin: () => renderCheckin(session), daily: renderDaily, history: renderHistory, gpt: renderGpt };
+  const renders = { home: renderHome, checkin: () => renderCheckin(session), daily: initDaily, history: renderHistory, gpt: renderGpt };
   renders[name] && renders[name]();
 }
 
@@ -1179,10 +1179,13 @@ const PLANNING_ITEMS = [
   'Er de næste dages aktiviteter planlagt',
 ];
 
-function renderDaily() {
+function initDaily() {
   const existing = getDailies()[todayKey()] || {};
   tempDaily = { myStates: [...(existing.myStates || [])], herStates: [...(existing.herStates || [])], planning: [...(existing.planning || [])] };
+  renderDaily();
+}
 
+function renderDaily() {
   document.getElementById('myDailyGrid').innerHTML = MY_DAILY.map(s => {
     const isOn = tempDaily.myStates.includes(s.label);
     const cls = s.score > 0 ? 'chip pos' : 'chip neg';
@@ -1397,12 +1400,12 @@ function tickBreath() {
 }
 function stopBreath() { clearInterval(bTimer); }
 
-let checkState = { pattern: null, vred: null, bedt: null, rationel: null, eskalere: null, folelse: null };
+let checkState = { sket: null, monster: null, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null };
 
 function showChecklist() {
   document.getElementById('pBreath').style.display = 'none';
   document.getElementById('pCheck').style.display = 'block';
-  checkState = { pattern: null, vred: null, bedt: null, rationel: null, eskalere: null, folelse: null };
+  checkState = { sket: null, monster: null, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null };
   renderChecklist();
 }
 
@@ -1417,64 +1420,53 @@ function renderChecklist() {
         ? `<span style="color:var(--green);font-weight:700;">✓ ${answer === 'ja' ? 'Ja' : 'Nej'}</span>`
         : `<div style="display:flex;gap:10px;width:100%;">${btns}</div>`}
     </div>`;
-  const warn = (icon, title, sub, rgb) => `
+  const stop = (icon, title, sub, rgb) => `
     <div style="padding:16px;border-radius:14px;background:rgba(${rgb},0.1);border:2px solid rgba(${rgb},0.3);margin-bottom:4px;">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px;">${icon} ${title}</div>
       ${sub ? `<div style="color:var(--muted);font-size:14px;">${sub}</div>` : ''}
     </div>`;
 
   let html = '';
+  let stopped = false;
 
-  // Q1: Gammelt mønster
-  if (s.pattern === null) {
-    html += q('Ligner det du vil gøre lige nu dit gamle mønster?', null, bJa("setPattern('ja')") + bNej("setPattern('nej')"));
-  } else {
-    html += q('Ligner det du vil gøre lige nu dit gamle mønster?', s.pattern, '');
-    if (s.pattern === 'ja') {
-      html += warn('⏸', 'Stop og tænk', 'Genkend mønsteret — du behøver ikke handle på det nu', '245,158,11');
-    }
-  }
+  // Q1: Er det lige sket?
+  html += q('Er det lige sket?', s.sket, bJa("setSket('ja')") + bNej("setSket('nej')"));
+  if (s.sket === 'nej') { html += stop('⏸', 'Tag en pause', 'Kom tilbage til det når det er aktuelt', '245,158,11'); stopped = true; }
 
-  if (s.pattern === 'nej') {
-    // Q2: Vred?
-    html += q('Er hun vred/oprevet nu?', s.vred, bJa("setVred('ja')") + bNej("setVred('nej')"));
-    if (s.vred === 'ja') {
-      html += warn('💙', 'Mød hende i følelsen lige nu', 'Uden forklaringer og løsninger', '59,130,246');
-    }
+  if (!stopped && s.sket === 'ja') {
+    // Q2: Gammelt mønster?
+    html += q('Er mine følelser nu på vej i et gammelt mønster?', s.monster, bJa("setMonster('ja')") + bNej("setMonster('nej')"));
+    if (s.monster === 'ja') { html += stop('⏸', 'Genkend mønsteret', 'Du behøver ikke handle på det nu', '245,158,11'); stopped = true; }
 
-    if (s.vred === 'nej') {
-      // Q3: Bedt om forklaring?
-      html += q('Har hun bedt dig om at forklare dig?', s.bedt, bJa("setBedt('ja')") + bNej("setBedt('nej')"));
-      if (s.bedt === 'nej') {
-        html += warn('✋', 'Hun har ikke bedt om en forklaring', 'Du behøver ikke sige noget nu', '245,158,11');
-        html += `
-          <div style="padding:16px;border-radius:14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);margin-bottom:4px;">
-            <div style="font-size:15px;font-weight:700;color:var(--primary);margin-bottom:6px;">💙 Hvad kan du sige der møder hende i følelsen og kommunikerer at du tager ansvar?</div>
-          </div>`;
-      }
+    if (!stopped && s.monster === 'nej') {
+      // Q3: Er hun vred?
+      html += q('Er hun vred/oprevet?', s.vred, bJa("setVred('ja')") + bNej("setVred('nej')"));
 
-      if (s.bedt === 'ja') {
-        // Q4: Kræver rationalitet?
-        html += q('Vil det du siger nu, kræve at hun er rationel?', s.rationel, bJa("setRationel('ja')") + bNej("setRationel('nej')"));
-        if (s.rationel === 'ja') {
-          html += warn('⏸', 'Vent — hun er ikke klar til at være rationel endnu', '', '245,158,11');
-        }
+      if (s.vred !== null) {
+        // Q4: Kan du møde hende i følelsen?
+        html += q('Kan du møde hende i følelsen?', s.folelse, bJa("setFolelse('ja')") + bNej("setFolelse('nej')"));
+        if (s.folelse === 'nej') { html += stop('💙', 'Mød hende i følelsen først', 'Inden du siger noget andet', '59,130,246'); stopped = true; }
 
-        if (s.rationel === 'nej') {
-          // Q5: Vil eskalere?
-          html += q('Vil det du siger nu, få det til at eskalere?', s.eskalere, bJa("setEskalere('ja')") + bNej("setEskalere('nej')"));
-          if (s.eskalere === 'ja') {
-            html += warn('⏸', 'Det vil eskalere — afvent situationen', '', '245,158,11');
-          }
+        if (!stopped && s.folelse === 'ja') {
+          // Q5: Kan du tilsidesætte dine forklaringer?
+          html += q('Kan du tilsidesætte dine forklaringer?', s.forklaring, bJa("setForklaring('ja')") + bNej("setForklaring('nej')"));
+          if (s.forklaring === 'nej') { html += stop('⏸', 'Ingen forklaring er nødvendig lige nu', '', '245,158,11'); stopped = true; }
 
-          if (s.eskalere === 'nej') {
-            // Q6: Møder følelsen?
-            html += q('Møder du hende først i hendes følelse med det du siger?', s.folelse, bJa("setFolelse('ja')") + bNej("setFolelse('nej')"));
-            if (s.folelse === 'nej') {
-              html += warn('💙', 'Mød hende i hendes følelse først', 'Før du siger noget andet', '59,130,246');
-            }
-            if (s.folelse === 'ja') {
-              html += warn('✅', 'Kan du sige det helt kort og klart, uden at tale hende efter munden?', '', '16,185,129');
+          if (!stopped && s.forklaring === 'ja') {
+            // Q6: Kræver rationalitet?
+            html += q('Kræver det du vil sige at hun er rationel?', s.rationel, bJa("setRationel('ja')") + bNej("setRationel('nej')"));
+            if (s.rationel === 'ja') { html += stop('⏸', 'Vent — hun er ikke klar til at være rationel endnu', '', '245,158,11'); stopped = true; }
+
+            if (!stopped && s.rationel === 'nej') {
+              // Q7: Fare for eskalering?
+              html += q('Er der fare for du siger noget der får det til at eskalere?', s.eskalere, bJa("setEskalere('ja')") + bNej("setEskalere('nej')"));
+              if (s.eskalere === 'ja') { html += stop('⏸', 'Afvent situationen', '', '245,158,11'); stopped = true; }
+
+              if (!stopped && s.eskalere === 'nej') {
+                // Q8: Kan du sige det kort og klart?
+                html += q('Kan du sige det kort og klart?', s.kort, bJa("setKort('ja')") + bNej("setKort('nej')"));
+                if (s.kort === 'nej') { html += stop('💙', 'Formulér det kortere og klarere', 'Prøv igen når du er klar', '59,130,246'); }
+              }
             }
           }
         }
@@ -1486,24 +1478,18 @@ function renderChecklist() {
   updateCheckDone();
 }
 
-function setPattern(v)  { checkState.pattern = v; checkState.vred = null; checkState.bedt = null; checkState.rationel = null; checkState.eskalere = null; checkState.folelse = null; renderChecklist(); }
-function setVred(v)     { checkState.vred = v;    checkState.bedt = null; checkState.rationel = null; checkState.eskalere = null; checkState.folelse = null; renderChecklist(); }
-function setBedt(v)     { checkState.bedt = v;    checkState.rationel = null; checkState.eskalere = null; checkState.folelse = null; renderChecklist(); }
-function setRationel(v) { checkState.rationel = v; checkState.eskalere = null; checkState.folelse = null; renderChecklist(); }
-function setEskalere(v) { checkState.eskalere = v; checkState.folelse = null; renderChecklist(); }
-function setFolelse(v)  { checkState.folelse = v; renderChecklist(); }
-function toggleCk() {}
-function toggleCheck() {}
+function setSket(v)      { checkState = { ...checkState, sket: v, monster: null, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setMonster(v)   { checkState = { ...checkState, monster: v, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setVred(v)      { checkState = { ...checkState, vred: v, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setFolelse(v)   { checkState = { ...checkState, folelse: v, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setForklaring(v){ checkState = { ...checkState, forklaring: v, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setRationel(v)  { checkState = { ...checkState, rationel: v, eskalere: null, kort: null }; renderChecklist(); }
+function setEskalere(v)  { checkState = { ...checkState, eskalere: v, kort: null }; renderChecklist(); }
+function setKort(v)      { checkState = { ...checkState, kort: v }; renderChecklist(); }
 
 function updateCheckDone() {
   const s = checkState;
-  let done = false;
-  if (s.pattern === 'ja') done = true;
-  if (s.pattern === 'nej' && s.vred === 'ja') done = true;
-  if (s.pattern === 'nej' && s.vred === 'nej' && s.bedt === 'nej') done = true;
-  if (s.pattern === 'nej' && s.vred === 'nej' && s.bedt === 'ja' && s.rationel === 'ja') done = true;
-  if (s.pattern === 'nej' && s.vred === 'nej' && s.bedt === 'ja' && s.rationel === 'nej' && s.eskalere === 'ja') done = true;
-  if (s.pattern === 'nej' && s.vred === 'nej' && s.bedt === 'ja' && s.rationel === 'nej' && s.eskalere === 'nej' && s.folelse !== null) done = true;
+  const done = s.sket === 'nej' || s.monster === 'ja' || s.folelse === 'nej' || s.forklaring === 'nej' || s.rationel === 'ja' || s.eskalere === 'ja' || s.kort !== null;
   document.getElementById('checkDoneBtn').style.display = done ? 'block' : 'none';
 }
 
