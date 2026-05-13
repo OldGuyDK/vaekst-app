@@ -514,6 +514,7 @@
     <h1 id="homeGreet">God dag 👋</h1>
     <p id="homeDate"></p>
   </div>
+  <div class="card" id="homeKlarCard"></div>
   <div class="card" id="homeSessionCard"></div>
   <div class="card" id="homeRemindersCard"></div>
   <div class="card" id="homeInitiativCard"></div>
@@ -757,6 +758,24 @@ function renderHome() {
     </div>
   `;
 
+  const klarChecked = _getKlarItems();
+  const klarDone = klarChecked.length === KLAR_ITEMS.length;
+  document.getElementById('homeKlarCard').innerHTML = `
+    <button class="dropdown-toggle ${klarDone ? 'has-selection' : ''}" onclick="toggleDropdown('klarDropdown')" style="width:100%;">
+      <span style="font-weight:700;">Klar til dagen &nbsp;<span style="color:var(--muted);font-size:13px;font-weight:400;">${klarChecked.length}/${KLAR_ITEMS.length}</span></span>
+      <span>${klarDone ? '✅' : '▾'}</span>
+    </button>
+    <div class="dropdown-list" id="klarDropdown">
+      ${KLAR_ITEMS.map(item => {
+        const on = klarChecked.includes(item);
+        return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.replace(/'/g, "\\'")}')">
+          <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+          <div>${item}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+
   const done = todaysDone();
   const today = todayKey();
   const entries = getEntries().filter(e => e.date === today);
@@ -891,15 +910,23 @@ function renderHome() {
   const rems = getTodayReminders();
   document.getElementById('homeRemindersCard').innerHTML = `
     <div class="card-title">⏰ Dagens reminders</div>
-    ${rems.length ? rems.map(r => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-        <div onclick="toggleReminderDone(${r.id})" style="width:22px;height:22px;border-radius:50%;border:2px solid ${r.done?'var(--green)':'var(--border)'};background:${r.done?'rgba(16,185,129,0.15)':'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;">${r.done?'✓':''}</div>
-        <div style="flex:1;${r.done?'opacity:0.45;text-decoration:line-through;':''}">
-          <div style="font-size:14px;font-weight:600;">${r.text}</div>
-          ${r.time?`<div style="font-size:12px;color:var(--muted);">⏰ ${r.time}</div>`:''}
+    ${rems.length ? rems.map(r => {
+      const faded = false;
+      const ckBtn = (active, color, rgb, label, fn) =>
+        `<button onclick="${fn}(${r.id})" style="flex:1;padding:6px 4px;border-radius:8px;border:2px solid ${active?color:`rgba(${rgb},0.3)`};background:${active?`rgba(${rgb},0.15)`:'transparent'};color:${active?color:'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${active?'✓ ':''} ${label}</button>`;
+      return `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);${faded?'opacity:0.5;':''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+          <div style="${r.done?'text-decoration:line-through;color:var(--muted);':''}font-size:14px;font-weight:600;flex:1;">${r.text}${r.time?` <span style="font-size:12px;font-weight:400;color:var(--muted);">⏰ ${r.time}</span>`:''}</div>
+          <button onclick="deleteReminder(${r.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 0 0 8px;flex-shrink:0;">✕</button>
         </div>
-        <button onclick="deleteReminder(${r.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 6px;">✕</button>
-      </div>`).join('') : '<p style="color:var(--muted);font-size:14px;margin-bottom:8px;">Ingen reminders endnu</p>'}
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${ckBtn(r.done,       'var(--green)',   '16,185,129', 'Done',          'toggleReminderDone')}
+          ${ckBtn(r.meldtTilbage,'var(--primary)','59,130,246', 'Meldt tilbage', 'toggleReminderMeldt')}
+          <span style="font-size:22px;transition:opacity 0.2s;${r.done && r.meldtTilbage ? 'opacity:1;' : 'opacity:0;'}">👍</span>
+        </div>
+      </div>`;
+    }).join('') : '<p style="color:var(--muted);font-size:14px;margin-bottom:8px;">Ingen reminders endnu</p>'}
     <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
       <input id="newRemText" type="text" placeholder="Stikord..." style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
       <input id="newRemTime" type="time" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;width:110px;">
@@ -910,6 +937,7 @@ function renderHome() {
 
 // ---- REMINDERS ----
 const _notifiedRems = new Set();
+const _alarmCooldown = new Map();
 let _todayRems = null;
 
 function getTodayReminders() {
@@ -930,7 +958,7 @@ function addReminder() {
   const text = document.getElementById('newRemText').value.trim();
   const time = document.getElementById('newRemTime').value;
   if (!text && !time) return;
-  getTodayReminders().push({ id: Date.now(), text: text || '–', time, date: todayKey(), done: false });
+  getTodayReminders().push({ id: Date.now(), text: text || '–', time, date: todayKey(), done: false, meldtTilbage: false });
   saveReminders();
   renderHome();
 }
@@ -943,6 +971,11 @@ function deleteReminder(id) {
 
 function toggleReminderDone(id) {
   getTodayReminders().forEach(r => { if (r.id === id) r.done = !r.done; });
+  saveReminders();
+  renderHome();
+}
+function toggleReminderMeldt(id) {
+  getTodayReminders().forEach(r => { if (r.id === id) r.meldtTilbage = !r.meldtTilbage; });
   saveReminders();
   renderHome();
 }
@@ -971,13 +1004,18 @@ function checkReminderAlarms() {
   const now = new Date();
   const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
   getTodayReminders().forEach(r => {
-    if (r.time === hhmm && !r.done && !_notifiedRems.has(r.id)) {
+    if (!r.time || r.done || r.meldtTilbage) return;
+    const alarmPassed = r.time <= hhmm;
+    if (!alarmPassed) return;
+    const last = _alarmCooldown.get(r.id) || 0;
+    const cooldownOk = !_notifiedRems.has(r.id) || (Date.now() - last) > 2 * 60 * 1000;
+    if (cooldownOk) {
       _notifiedRems.add(r.id);
+      _alarmCooldown.set(r.id, Date.now());
       playAlarmBeep();
       showToast('⏰ ' + r.text);
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted')
         new Notification('Vækst reminder', { body: r.text });
-      }
     }
   });
 }
@@ -1164,6 +1202,16 @@ function toggleDropdown(id) {
   document.getElementById(id).classList.toggle('open');
 }
 
+function toggleKlarItem(item) {
+  const items = _getKlarItems();
+  const i = items.indexOf(item);
+  if (i > -1) items.splice(i, 1); else items.push(item);
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
+}
+
 function toggleHomeInit(iv) {
   const d = getData();
   if (!d.dailies) d.dailies = {};
@@ -1225,6 +1273,13 @@ function saveCiEntry() {
 
 // ---- DAILY ----
 let tempDaily = {};
+
+const KLAR_ITEMS = [
+  'Løse ender',
+  'Rækkefølge',
+  'Information om dagen, der ikke er aftalt',
+  'Information om kommende dage, der skal aftales',
+];
 
 const PLANNING_ITEMS = [
   'Er der styr på kalender',
@@ -1762,6 +1817,18 @@ let _stops = null;
 function _getStops() {
   if (_stops === null) _stops = getData().stops || [];
   return _stops;
+}
+
+let _klarItems = null;
+function _getKlarItems() {
+  if (_klarItems === null) _klarItems = (getData().klar || {})[todayKey()] || [];
+  return _klarItems;
+}
+function _saveKlarItems() {
+  const d = getData();
+  if (!d.klar) d.klar = {};
+  d.klar[todayKey()] = _klarItems;
+  setData(d);
 }
 
 let _adfaerd = null;
