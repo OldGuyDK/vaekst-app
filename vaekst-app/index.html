@@ -292,7 +292,7 @@
       position: fixed; top: 0; left: 50%; transform: translateX(-50%);
       display: flex; align-items: center;
       width: 100%; max-width: 480px;
-      background: #000; padding: 54px 10px 8px; gap: 10px;
+      background: #000; padding: 54px 16px 8px; gap: 8px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.6);
       z-index: 200;
     }
@@ -494,7 +494,7 @@
   <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
   <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
   <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
-  <button class="fab" style="background:var(--red);" onclick="openPanic()">🆘<span class="fab-label">PANIK</span></button>
+  <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
 </div>
 
 <!-- EXPIRED REMINDERS MODAL -->
@@ -620,9 +620,11 @@ const OBSERVATIONS = [
 // Responses with scores
 const RESPONSES = [
   { label: 'Italesatte observationen', score: +10 },
-  { label: 'Spurgte ind',              score: +10 },
+  { label: 'Nærværende Aktiv',         score: +10 },
+  { label: 'Nærværende',              score: +10 },
+  { label: 'Lyttende',                score: +10 },
   { label: 'Blev afventende',          score: -10 },
-  { label: 'Trak sig',                 score: -10 },
+  { label: 'Trak mig',                 score: -10 },
   { label: 'Gik i forsvar',            score: -10 },
   { label: 'Forklarede',               score: -10 },
 ];
@@ -962,11 +964,13 @@ function renderHome() {
         </div>` : ''}
       </div>`;
     }).join('') : `<p style="color:var(--muted);font-size:14px;margin-bottom:8px;">${hasOverdue ? 'Øvrige reminders vises herunder' : 'Ingen reminders endnu'}</p>`}
-    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;margin-top:10px;align-items:center;">
-      <input id="newRemText" type="text" placeholder="Stikord..." style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
-      <input id="newRemDate" type="date" value="${today2}" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
-      <input id="newRemTime" type="time" style="padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
-      <button onclick="addReminder()" style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:24px;cursor:pointer;flex-shrink:0;line-height:1;">+</button>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+      <input id="newRemText" type="text" placeholder="Stikord..." style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="newRemDate" type="date" value="${today2}" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
+        <input id="newRemTime" type="time" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
+        <button onclick="addReminder()" style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:24px;cursor:pointer;flex-shrink:0;line-height:1;">+</button>
+      </div>
     </div>
   `;
 
