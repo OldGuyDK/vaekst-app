@@ -443,6 +443,7 @@
     <div class="panic-heading" style="color:var(--primary);">🤝 OMSORG</div>
     <button class="close-x" onclick="closeGrib()">✕</button>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;" id="omsorgCounters"></div>
   <div style="padding:12px 16px; border-radius:12px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); margin-bottom:20px; font-size:15px; font-weight:700; color:var(--primary); text-align:center;">
     💙 Husk du taler med hendes indre barn
   </div>
@@ -527,7 +528,6 @@
   <div class="card" id="homeKlarCard"></div>
   <div class="card" id="homeSessionCard"></div>
   <div class="card" id="homeRemindersCard"></div>
-  <div class="card" id="homeInitiativCard"></div>
   <div class="card" id="homeDailyCard">
     <div class="card-title">Dagsoversigt</div>
     <div id="homeDailyContent"></div>
@@ -614,7 +614,7 @@ const S_ICONS  = ['🌅','☀️','🌤️','🌆','🌙'];
 const OBSERVATIONS = [
   'Lukket','Fjern','Overskud','Kommunikerende','Åben',
   'Øjenkontakt','Imødekommende','Hård stemmeføring','Let stemmeføring','Glad',
-  'Stille','Blid','Vred'
+  'Stille','Blid','Vred','Såret','Sårbar','Ked af det','Frustreret'
 ];
 
 // Responses with scores
@@ -634,13 +634,16 @@ const OUTCOMES = [
   { label: 'Landede godt',    score: +10 },
   { label: 'Landede roligt',  score: +10 },
   { label: 'Følte sig mødt',  score: +10 },
-  { label: 'Endte i konflikt',score: -20 },
-  { label: 'Endte i tavshed', score: -20 },
+  { label: 'Følte sig ikke mødt', score: -20 },
+  { label: 'Endte i konflikt',   score: -20 },
+  { label: 'Endte i tavshed',    score: -20 },
 ];
 
 // Initiative (tracking only, no score)
 const INITIATIVES = [
-  { label: 'Selv tage fat om et følsomt emne' },
+  { label: 'Du har nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!' },
+  { label: 'Du var der for mig tidligere i dag, jeg er i stand til at være der for dig nu?' },
+  { label: 'Jeg vil gerne gengælde den omsorg du viste mig tidligere i dag, har du brug for at ...?' },
   { label: 'Uselvisk, uopfordret initiativ' },
   { label: 'Tilbyde min assistance', script: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
   { label: 'Tage lead på eget initiativ', script: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
@@ -777,6 +780,7 @@ function renderHome() {
   `;
 
   const klarChecked = _getKlarItems();
+  const klarSubs = _getKlarSubs();
   const klarDone = klarChecked.length === KLAR_ITEMS.length;
   document.getElementById('homeKlarCard').innerHTML = `
     <button class="dropdown-toggle ${klarDone ? 'has-selection' : ''}" onclick="toggleDropdown('klarDropdown')" style="width:100%;">
@@ -785,11 +789,40 @@ function renderHome() {
     </button>
     <div class="dropdown-list" id="klarDropdown">
       ${KLAR_ITEMS.map(item => {
-        const on = klarChecked.includes(item);
-        return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.replace(/'/g, "\\'")}')">
-          <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
-          <div>${item}</div>
-        </div>`;
+        if (typeof item === 'string') {
+          const on = klarChecked.includes(item);
+          return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.replace(/'/g, "\\'")}')">
+            <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+            <div>${item}</div>
+          </div>`;
+        } else if (item.info !== undefined) {
+          // Object with info text
+          const on = klarChecked.includes(item.label);
+          return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.label.replace(/'/g,"\\'")}')">
+            <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+            <div>
+              <div>${item.label}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;white-space:pre-line;line-height:1.5;">${item.info}</div>
+            </div>
+          </div>`;
+        } else {
+          // Object item with subs
+          const parentOn = klarChecked.includes(item.label);
+          const chosenSub = klarSubs[item.label] || null;
+          return `<div style="border-bottom:1px solid var(--border);">
+            <div class="dropdown-opt ${parentOn ? 'on' : ''}" style="cursor:default;">
+              <div class="dropdown-opt-circle">${parentOn ? '✓' : ''}</div>
+              <div style="font-weight:700;">${item.label}</div>
+            </div>
+            ${item.subs.map(sub => {
+              const on = chosenSub === sub;
+              return `<div class="dropdown-opt ${on ? 'on' : ''}" style="padding-left:32px;font-size:13px;" onclick="selectKlarSub('${item.label.replace(/'/g,"\\'")}','${sub.replace(/'/g,"\\'")}')">
+                <div class="dropdown-opt-circle" style="width:18px;height:18px;">${on ? '✓' : ''}</div>
+                <div style="line-height:1.4;">${sub}</div>
+              </div>`;
+            }).join('')}
+          </div>`;
+        }
       }).join('')}
     </div>
   `;
@@ -830,36 +863,10 @@ function renderHome() {
     <div class="dropdown-list" id="sessionDropdown">${sessionRows}</div>
   `;
 
-  // Initiativ
-  const daily2 = getDailies()[today] || {};
-  const homeInits = daily2.homeInitiatives || [];
-  const ciInits = [...new Set(entries.flatMap(e => e.initiatives || []))];
-  const allInits = [...new Set([...homeInits, ...ciInits])];
-
-  document.getElementById('homeInitiativCard').innerHTML = `
-    <div class="card-title">Initiativ i dag</div>
-    <button class="dropdown-toggle ${homeInits.length ? 'has-selection' : ''}" onclick="toggleDropdown('initDropdown')" style="margin-bottom:8px;">
-      <span>Registrér initiativ</span><span>▾</span>
-    </button>
-    <div class="dropdown-list" id="initDropdown">
-      ${INITIATIVES.map(iv => `
-        <div class="dropdown-opt ${homeInits.includes(iv.label) ? 'on' : ''}" onclick="toggleHomeInit('${iv.label}')">
-          <div class="dropdown-opt-circle">${homeInits.includes(iv.label) ? '✓' : ''}</div>
-          <div>
-            <div>${iv.label}</div>
-            ${iv.script ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;white-space:pre-line;line-height:1.5;">${iv.script}</div>` : ''}
-          </div>
-        </div>`).join('')}
-    </div>
-    <div style="margin-top:10px;">
-      ${allInits.length
-        ? allInits.map(iv => `<div style="padding:8px 12px; background:rgba(59,130,246,0.1); border-radius:10px; color:var(--primary); font-weight:600; font-size:14px; margin-bottom:6px;">✓ ${iv}</div>`).join('')
-        : '<p style="color:var(--muted); font-size:14px;">Ingen initiativ registreret i dag</p>'}
-    </div>
-  `;
 
   const sc = getStopCounts();
   const ac = getAdfaerdCounts();
+  const oc = getOmsorgCounts();
   const sep = `<span style="color:var(--muted);font-size:14px;font-weight:400;"> – </span>`;
   document.getElementById('homeStopCard').innerHTML = `
     <div class="card-title">💪 Impuls og adfærdskontrol</div>
@@ -874,6 +881,18 @@ function renderHome() {
       <div style="text-align:center;padding:10px 6px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke</div>
         <div style="font-size:22px;font-weight:800;color:var(--red);">${sc.todayNotStopped}${sep}${sc.weekNotStopped}</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">OMSORG</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="text-align:center;padding:10px 6px;background:rgba(59,130,246,0.08);border-radius:12px;border:1px solid rgba(59,130,246,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">🤝 Modtog</div>
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">${oc.modtog.d}${sep}${oc.modtog.w}</div>
+      </div>
+      <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">💚 Gav</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green);">${oc.gav.d}${sep}${oc.gav.w}</div>
       </div>
     </div>
 
@@ -898,6 +917,10 @@ function renderHome() {
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(100,116,139,0.08);border-radius:10px;">
         <span style="font-size:13px;font-weight:600;">⚪ Indre barn</span>
         <span style="font-size:16px;font-weight:800;color:var(--muted);">${ac.indreBarn.d}${sep}${ac.indreBarn.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(139,92,246,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🛑 Standsede automatadfærd</span>
+        <span style="font-size:16px;font-weight:800;color:#8b5cf6;">${ac.standsede.d}${sep}${ac.standsede.w}</span>
       </div>
     </div>
   `;
@@ -1170,10 +1193,10 @@ if (typeof Notification !== 'undefined' && Notification.permission === 'default'
 }
 
 // ---- CHECK-IN ----
-let ci = { session: null, step: 0, obs: [], responses: [], outcomes: [], initiatives: [], state: null };
+let ci = { session: null, step: 0, obs: [], exchange: [], responses: [], outcomes: [], initiatives: [], state: null };
 
 function renderCheckin(preselect) {
-  ci = { session: null, step: 0, obs: [], responses: [], outcomes: [], initiatives: [], state: null };
+  ci = { session: null, step: 0, obs: [], exchange: [], responses: [], outcomes: [], initiatives: [], state: null };
   if (preselect) {
     ci.session = preselect;
     showCiForm();
@@ -1200,6 +1223,7 @@ function selectSession(s) {
   ci.session = s;
   ci.step = 0;
   ci.obs = [];
+  ci.exchange = [];
   ci.responses = [];
   ci.outcomes = [];
   ci.initiatives = [];
@@ -1213,7 +1237,7 @@ function showCiForm() {
 }
 
 function renderCiStep() {
-  const TOTAL = 5;
+  const TOTAL = 6;
   const dots = Array.from({length: TOTAL}, (_,i) =>
     `<div class="step-dot ${i < ci.step ? 'done' : i === ci.step ? 'now' : ''}"></div>`
   ).join('');
@@ -1221,6 +1245,31 @@ function renderCiStep() {
   let body = '';
 
   if (ci.step === 0) {
+    const EXCHANGE_Q = [
+      'Har jeg modtaget sparring eller omsorg?',
+      'Har jeg bedt hende om at yde noget?',
+      'Har jeg ydet noget for hende?',
+      'Har hun bedt mig om at yde noget?',
+      'Har jeg givet hende sparring eller omsorg?',
+    ];
+    body = `
+      <div class="card">
+        <div class="card-title">Givet og modtaget</div>
+        <div class="card-sub">Vælg alt der passer — tæller i antal</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;margin-bottom:16px;">
+          ${EXCHANGE_Q.map(q => {
+            const on = ci.exchange.includes(q);
+            return `<button onclick="toggleExchange('${q.replace(/'/g,"\\'")}'); renderCiStep();"
+              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--primary)' : 'var(--border)'};background:${on ? 'rgba(59,130,246,0.12)' : 'var(--card2)'};color:${on ? 'var(--primary)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+              ${on ? '✓ ' : ''}${q}
+            </button>`;
+          }).join('')}
+        </div>
+        <button class="btn-primary" onclick="ciNext()">Videre →</button>
+        <button class="btn-secondary" onclick="showSessionPicker()">← Vælg andet tidspunkt</button>
+      </div>
+    `;
+  } else if (ci.step === 1) {
     body = `
       <div class="card">
         <div class="card-title">${S_ICONS[SESSIONS.indexOf(ci.session)]} Observationer</div>
@@ -1231,10 +1280,10 @@ function renderCiStep() {
           ).join('')}
         </div>
         <button class="btn-primary" ${ci.obs.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
-        <button class="btn-secondary" onclick="showSessionPicker()">← Vælg andet tidspunkt</button>
+        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
       </div>
     `;
-  } else if (ci.step === 1) {
+  } else if (ci.step === 2) {
     const currentScore = ci.responses.reduce((s, r) => {
       const found = RESPONSES.find(x => x.label === r);
       return s + (found ? found.score : 0);
@@ -1262,7 +1311,7 @@ function renderCiStep() {
         <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
       </div>
     `;
-  } else if (ci.step === 2) {
+  } else if (ci.step === 3) {
     const outcomeScore = ci.outcomes.reduce((s, o) => {
       const found = OUTCOMES.find(x => x.label === o);
       return s + (found ? found.score : 0);
@@ -1290,7 +1339,7 @@ function renderCiStep() {
         <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
       </div>
     `;
-  } else if (ci.step === 3) {
+  } else if (ci.step === 4) {
     body = `
       <div class="card">
         <div class="card-title">Tilstand & Initiativ</div>
@@ -1315,7 +1364,7 @@ function renderCiStep() {
         <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
       </div>
     `;
-  } else if (ci.step === 4) {
+  } else if (ci.step === 5) {
     const entryScore = calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes });
     const summary = `[${ci.session}] Observerede: ${ci.obs.join(', ')}. Reaktion: ${ci.responses.join(', ')}. Udfald: ${ci.outcomes.join(', ')}. Initiativ: ${ci.initiatives.join(', ')||'–'}. Tilstand: ${ci.state}.`;
     _stikordCtx = summary;
@@ -1351,6 +1400,24 @@ function toggleKlarItem(item) {
   const items = _getKlarItems();
   const i = items.indexOf(item);
   if (i > -1) items.splice(i, 1); else items.push(item);
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
+}
+
+function selectKlarSub(parentLabel, subLabel) {
+  const items = _getKlarItems();
+  const subs = _getKlarSubs();
+  if (subs[parentLabel] === subLabel) {
+    // Deselect
+    delete subs[parentLabel];
+    const i = items.indexOf(parentLabel);
+    if (i > -1) items.splice(i, 1);
+  } else {
+    subs[parentLabel] = subLabel;
+    if (!items.includes(parentLabel)) items.push(parentLabel);
+  }
   _saveKlarItems();
   renderHome();
   const dd = document.getElementById('klarDropdown');
@@ -1396,10 +1463,11 @@ function toggleInitiative(iv) {
 
 function ciNext() { ci.step++; renderCiStep(); }
 function ciPrev() { ci.step--; renderCiStep(); }
+function toggleExchange(q) { const i = ci.exchange.indexOf(q); if (i > -1) ci.exchange.splice(i,1); else ci.exchange.push(q); }
 
 function saveCiEntry() {
   const note = document.getElementById('ciNote')?.value || '';
-  saveEntry({ date: todayKey(), session: ci.session, observations: ci.obs, responses: ci.responses, outcomes: ci.outcomes, initiatives: ci.initiatives, state: ci.state, note, ts: Date.now() });
+  saveEntry({ date: todayKey(), session: ci.session, observations: ci.obs, exchange: ci.exchange, responses: ci.responses, outcomes: ci.outcomes, initiatives: ci.initiatives, state: ci.state, note, ts: Date.now() });
   const entryScore = ci.responses.reduce((s, r) => {
     const found = RESPONSES.find(x => x.label === r);
     return s + (found ? found.score : 0);
@@ -1424,6 +1492,14 @@ const KLAR_ITEMS = [
   'Plan for dagen?',
   'Ændringer for dagen?',
   'Ny info der skal meldes ud?',
+  'Uselvisk, uopfordret initiativ',
+  { label: 'Tilbyde min assistance', info: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
+  { label: 'Tage lead på eget initiativ', info: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
+  { label: 'Initiativ - Omsorg', subs: [
+    'Du har i går nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!',
+    'Du var der for mig i går, jeg vil gerne være der for dig i dag?',
+    'Jeg vil gerne gengælde den omsorg du viste mig i går, hvad kan jeg gøre for dig i dag?',
+  ]},
 ];
 
 const PLANNING_ITEMS = [
@@ -1778,17 +1854,81 @@ function showToast(msg) {
 // ---- IMPULS ----
 let imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
 
-function openGrib()  { document.getElementById('gribOverlay').classList.add('show'); }
+let _omsorg = null;
+function _getOmsorg() {
+  if (_omsorg === null) _omsorg = getData().omsorg || [];
+  return _omsorg;
+}
+function saveOmsorg() { const d = getData(); d.omsorg = _omsorg; setData(d); }
+
+function getOmsorgCounts() {
+  const o = _getOmsorg();
+  const today = todayKey(), week = getWeekKey();
+  const count = (type, period) => o.filter(x => x.type === type && x[period === 'd' ? 'date' : 'week'] === (period === 'd' ? today : week)).length;
+  return {
+    modtog: { d: count('modtog','d'), w: count('modtog','w') },
+    gav:    { d: count('gav','d'),    w: count('gav','w') },
+  };
+}
+
+function addOmsorg(type) {
+  _getOmsorg().push({ date: todayKey(), week: getWeekKey(), type, ts: Date.now() });
+  saveOmsorg();
+  renderGribBtns();
+  renderHome();
+}
+
+function renderGribBtns() {
+  const oc = getOmsorgCounts();
+  const sep = `<span style="color:rgba(255,255,255,0.4);font-size:14px;font-weight:400;"> – </span>`;
+  const counter = (type, label, icon, color, rgb) => `
+    <div style="padding:14px 8px;border-radius:14px;border:2px solid rgba(${rgb},0.4);background:rgba(${rgb},0.12);text-align:center;">
+      <div style="font-size:20px;margin-bottom:4px;">${icon}</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#fff;">${label}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+        <button onclick="removeOmsorg('${type}')" style="width:36px;height:36px;border-radius:50%;border:2px solid rgba(${rgb},0.5);background:rgba(${rgb},0.15);color:${color};font-size:22px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit;">−</button>
+        <div style="min-width:32px;text-align:center;">
+          <div style="font-size:28px;font-weight:900;color:${color};line-height:1;">${oc[type].d}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.4);">${sep}${oc[type].w} uge</div>
+        </div>
+        <button onclick="addOmsorg('${type}')" style="width:36px;height:36px;border-radius:50%;border:2px solid rgba(${rgb},0.5);background:rgba(${rgb},0.15);color:${color};font-size:22px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit;">+</button>
+      </div>
+    </div>`;
+  document.getElementById('omsorgCounters').innerHTML =
+    counter('modtog', 'Jeg modtog omsorg', '🤝', 'var(--primary)', '59,130,246') +
+    counter('gav',    'Jeg gav omsorg',    '💚', 'var(--green)',   '16,185,129');
+}
+
+function removeOmsorg(type) {
+  const arr = _getOmsorg();
+  const today = todayKey();
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i].type === type && arr[i].date === today) { arr.splice(i, 1); break; }
+  }
+  saveOmsorg();
+  renderGribBtns();
+  renderHome();
+}
+
+function openGrib()  {
+  document.getElementById('gribOverlay').classList.add('show');
+  renderGribBtns();
+}
 function closeGrib() { document.getElementById('gribOverlay').classList.remove('show'); }
 
 function openImpuls() {
-  imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+  imp = { text: '', stopped: null, followUps: [], followUpDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
   document.getElementById('impulsOverlay').classList.add('show');
   renderImpuls();
 }
 
 function closeImpuls() {
   document.getElementById('impulsOverlay').classList.remove('show');
+}
+
+function toggleFollowUp(item) {
+  const i = imp.followUps.indexOf(item);
+  if (i > -1) imp.followUps.splice(i, 1); else imp.followUps.push(item);
 }
 
 function renderImpuls() {
@@ -1812,9 +1952,40 @@ function renderImpuls() {
     return;
   }
 
+  const FOLLOW_UPS = [
+    'Jeg spurgte om jeg måtte afbryde',
+    'Jeg spurgte om hun havde lyst til at være omsorgsfuld',
+    'Jeg spurgte om hun havde lyst til at være blid og lyttende',
+    'Jeg spurgte om hun havde lyst til at give lidt sparring',
+  ];
+
+  if (imp.stopped === true && !imp.followUpDone) {
+    const bonusPoints = imp.followUps.length * 5;
+    el.innerHTML = `
+      <div class="card">
+        <div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:16px;">✋ Standsede op · +15 point</div>
+        <div class="card-title" style="margin-bottom:8px;">Hvad gjorde du derudover?</div>
+        <div class="card-sub" style="margin-bottom:12px;">Hvert valg giver +5 point</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+          ${FOLLOW_UPS.map(f => {
+            const on = imp.followUps.includes(f);
+            return `<button onclick="toggleFollowUp('${f.replace(/'/g,"\\'")}'); renderImpuls();"
+              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--green)' : 'var(--border)'};background:${on ? 'rgba(16,185,129,0.12)' : 'var(--card2)'};color:${on ? 'var(--green)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+              ${on ? '✓ ' : ''}${f}
+            </button>`;
+          }).join('')}
+        </div>
+        ${bonusPoints > 0 ? `<div style="text-align:center;color:var(--green);font-weight:700;font-size:14px;margin-bottom:12px;">Bonus: +${bonusPoints} point</div>` : ''}
+        <button class="btn-primary" onclick="imp.followUpDone=true; renderImpuls();">Videre →</button>
+        <button class="btn-secondary" onclick="imp.stopped=null; imp.followUps=[]; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
   if (imp.type === null) {
+    const bonusPoints = imp.followUps.length * 5;
     const stoppedHtml = imp.stopped
-      ? `<div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:14px;">✋ Standsede op · +15 point</div>`
+      ? `<div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:14px;">✋ Standsede op · +${15 + bonusPoints} point</div>`
       : `<div style="background:rgba(245,158,11,0.1); border-radius:12px; padding:10px 14px; color:var(--yellow); font-weight:700; margin-bottom:14px;">➡️ Fik ikke standset op</div>`;
     el.innerHTML = `
       <div class="card">
@@ -1936,10 +2107,11 @@ function saveImpuls(keep) {
   };
   if (keep) d.impulses.push(entry);
 
-  // +15 point for stopping
+  // +15 point for stopping + +5 per follow-up
   if (imp.stopped) {
     if (!d.impulsScore) d.impulsScore = {};
-    d.impulsScore[todayKey()] = (d.impulsScore[todayKey()] || 0) + 15;
+    const bonus = imp.followUps.length * 5;
+    d.impulsScore[todayKey()] = (d.impulsScore[todayKey()] || 0) + 15 + bonus;
   }
   setData(d);
   closeImpuls();
@@ -1967,14 +2139,21 @@ function _getStops() {
 }
 
 let _klarItems = null;
+let _klarSubs = null;
 function _getKlarItems() {
   if (_klarItems === null) _klarItems = (getData().klar || {})[todayKey()] || [];
   return _klarItems;
+}
+function _getKlarSubs() {
+  if (_klarSubs === null) _klarSubs = (getData().klarSubs || {})[todayKey()] || {};
+  return _klarSubs;
 }
 function _saveKlarItems() {
   const d = getData();
   if (!d.klar) d.klar = {};
   d.klar[todayKey()] = _klarItems;
+  if (!d.klarSubs) d.klarSubs = {};
+  d.klarSubs[todayKey()] = _klarSubs;
   setData(d);
 }
 
@@ -1985,11 +2164,12 @@ function _getAdfaerd() {
 }
 
 const ADFAERD_TYPES = [
-  { type: 'naervaerende', score: 20,  label: '🟢 Nærværende og spurgte ind', scoreLabel: '+20 point',     rgb: '16,185,129' },
-  { type: 'lyttende',     score: -10, label: '🟡 Lyttende men passiv',        scoreLabel: '−10 point',    rgb: '245,158,11' },
-  { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',      scoreLabel: '−30 point',    rgb: '239,68,68' },
-  { type: 'voksen',       score: 0,   label: '🔵 Voksen reaktion',            scoreLabel: 'tæller antal', rgb: '59,130,246' },
-  { type: 'indreBarn',    score: 0,   label: '⚪ Indre barn reaktion',         scoreLabel: 'tæller antal', rgb: '100,116,139' },
+  { type: 'naervaerende', score: 20,  label: '🟢 Nærværende og spurgte ind',                                                   scoreLabel: '+20 point',     rgb: '16,185,129' },
+  { type: 'lyttende',     score: -10, label: '🟡 Lyttende men passiv',                                                          scoreLabel: '−10 point',    rgb: '245,158,11' },
+  { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',                                                        scoreLabel: '−30 point',    rgb: '239,68,68' },
+  { type: 'voksen',       score: 0,   label: '🔵 Voksen reaktion',                                                              scoreLabel: 'tæller antal', rgb: '59,130,246' },
+  { type: 'indreBarn',    score: 0,   label: '⚪ Indre barn reaktion',                                                           scoreLabel: 'tæller antal', rgb: '100,116,139' },
+  { type: 'standsede',    score: 20,  label: '🛑 Standsede hende i automatadfærd og italesatte at det ikke var hendes opgave',  scoreLabel: '+20 point',    rgb: '139,92,246' },
 ];
 
 let _adfaerdSession = {};
@@ -2038,6 +2218,7 @@ function getAdfaerdCounts() {
     lukket:       { d: count('lukket','d'),        w: count('lukket','w') },
     voksen:       { d: count('voksen','d'),        w: count('voksen','w') },
     indreBarn:    { d: count('indreBarn','d'),     w: count('indreBarn','w') },
+    standsede:    { d: count('standsede','d'),     w: count('standsede','w') },
   };
 }
 
