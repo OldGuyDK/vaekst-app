@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Vækst">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.json">
+  <title>Vækst</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #0f172a; --card: #1e293b; --card2: #263548;
+      --primary: #3b82f6; --primary-dark: #2563eb;
+      --green: #10b981; --red: #ef4444; --yellow: #f59e0b;
+      --text: #f1f5f9; --muted: #94a3b8; --border: #334155;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; max-width: 480px; margin: 0 auto; overflow-x: hidden;
+    }
+
+    .view { display: none; padding: 140px 16px 90px; min-height: 100vh; animation: fadeIn 0.2s ease; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes overdueFlash { 0%,100% { border-color: rgba(239,68,68,0.4); } 50% { border-color: rgba(239,68,68,1); } }
+    .overdue-card { animation: overdueFlash 1.8s ease-in-out infinite; border: 2px solid rgba(239,68,68,0.6) !important; background: rgba(239,68,68,0.06) !important; }
+
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: var(--card); border-top: 1px solid var(--border);
+      display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 8px 2px; border: none; background: none;
+      color: var(--muted); font-size: 10px; gap: 2px; cursor: pointer;
+      transition: color 0.2s; font-family: inherit;
+    }
+    .nav-btn.active { color: var(--primary); }
+    .nav-icon { font-size: 20px; line-height: 1; }
+
+    .panic-fab {
+      position: fixed; bottom: 72px; right: 16px;
+      width: 62px; height: 62px; border-radius: 50%;
+      background: var(--red); color: #fff; border: none;
+      font-size: 10px; font-weight: 800; cursor: pointer; z-index: 200;
+      box-shadow: 0 4px 24px rgba(239,68,68,0.55);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1px; transition: transform 0.1s; font-family: inherit;
+    }
+    .panic-fab:active { transform: scale(0.93); }
+
+    .card { background: var(--card); border-radius: 18px; padding: 18px; margin-bottom: 12px; }
+    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.4; }
+
+    .page-header { padding: 20px 0 10px; }
+    .page-header h1 { font-size: 28px; font-weight: 800; }
+    .page-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    .session-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .session-btn {
+      background: var(--card2); border: 2px solid var(--border);
+      border-radius: 14px; padding: 16px 10px;
+      color: var(--text); font-size: 14px; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-family: inherit;
+    }
+    .session-btn:active { transform: scale(0.97); }
+    .session-btn.done { border-color: var(--green); color: var(--green); }
+
+    .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: var(--card2); border: 2px solid var(--border);
+      border-radius: 24px; padding: 9px 16px;
+      font-size: 14px; color: var(--text); cursor: pointer;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .chip.on { background: rgba(59,130,246,0.18); border-color: var(--primary); color: var(--primary); }
+    .chip.neg { background: var(--card2); border-color: var(--border); }
+    .chip.neg.on { background: rgba(239,68,68,0.18); border-color: var(--red); color: var(--red); }
+    .chip.pos { background: var(--card2); border-color: var(--border); }
+    .chip.pos.on { background: rgba(16,185,129,0.18); border-color: var(--green); color: var(--green); }
+    .chip.neu { background: var(--card2); border-color: var(--border); }
+    .chip.neu.on { background: rgba(148,163,184,0.18); border-color: var(--muted); color: var(--muted); }
+
+    .big-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .big-btn {
+      padding: 18px 12px; border-radius: 14px; border: 2px solid var(--border);
+      background: var(--card2); color: var(--text); font-size: 15px; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; line-height: 1.3;
+    }
+    .big-btn:active { transform: scale(0.97); }
+    .big-btn.on { border-color: var(--primary); background: rgba(59,130,246,0.15); color: var(--primary); }
+    .big-btn.on-green { border-color: var(--green); background: rgba(16,185,129,0.15); color: var(--green); }
+    .big-btn.on-yellow { border-color: var(--yellow); background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+    .btn-primary {
+      display: block; width: 100%; padding: 17px;
+      border-radius: 14px; border: none; background: var(--primary);
+      color: #fff; font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-top: 14px; transition: background 0.2s; font-family: inherit;
+    }
+    .btn-primary:active { background: var(--primary-dark); }
+    .btn-primary:disabled { opacity: 0.45; pointer-events: none; }
+    .btn-secondary {
+      display: block; width: 100%; padding: 14px;
+      border-radius: 14px; border: 2px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 15px; font-weight: 600;
+      cursor: pointer; margin-top: 10px; font-family: inherit;
+    }
+
+    .step-row { display: flex; gap: 6px; margin-bottom: 18px; }
+    .step-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+    .step-dot.done { background: var(--green); }
+    .step-dot.now { background: var(--primary); }
+
+    textarea {
+      width: 100%; background: var(--card2); border: 2px solid var(--border);
+      border-radius: 12px; padding: 13px; color: var(--text);
+      font-size: 15px; font-family: inherit; resize: none; min-height: 90px;
+    }
+    textarea:focus { outline: none; border-color: var(--primary); }
+
+    .gpt-btn {
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(135deg, #10b981, #0d9488);
+      border: none; border-radius: 16px; padding: 18px 20px;
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; width: 100%; text-decoration: none;
+      transition: opacity 0.15s; margin-top: 12px;
+    }
+    .gpt-btn:active { opacity: 0.85; }
+    .gpt-icon { font-size: 28px; flex-shrink: 0; }
+    .gpt-sub { font-size: 12px; font-weight: 400; opacity: 0.85; margin-top: 2px; }
+
+    /* HOME */
+    .session-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 12px; border-radius: 12px; margin-bottom: 6px;
+      background: var(--card2); cursor: pointer; transition: background 0.15s;
+      border: 2px solid transparent;
+    }
+    .session-row:active { background: rgba(59,130,246,0.1); }
+    .session-row.done { border-color: rgba(16,185,129,0.3); }
+    .session-emoji { font-size: 22px; width: 30px; text-align: center; }
+    .session-name { flex: 1; font-weight: 600; font-size: 15px; }
+    .session-check { font-size: 20px; }
+    .session-score { font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 8px; }
+    .score-pos { background: rgba(16,185,129,0.15); color: var(--green); }
+    .score-neg { background: rgba(239,68,68,0.15); color: var(--red); }
+    .score-zero { background: var(--card); color: var(--muted); }
+
+    /* SCORE DISPLAY */
+    .score-big {
+      text-align: center; padding: 20px;
+      border-radius: 18px; margin-bottom: 12px;
+    }
+    .score-number { font-size: 52px; font-weight: 800; line-height: 1; }
+    .score-label { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+    /* HISTORY */
+    .hist-card { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .hist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .hist-tag { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .hist-date { font-size: 12px; color: var(--muted); }
+    .hist-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
+    .hist-chip { background: rgba(59,130,246,0.14); border-radius: 10px; padding: 3px 9px; font-size: 12px; color: var(--primary); }
+    .hist-meta { display: flex; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; align-items: center; }
+    .hist-note { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 7px; line-height: 1.4; }
+
+    /* PANIC */
+    .panic-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #080c1a; z-index: 500; overflow-y: auto; padding: 20px 16px 40px;
+    }
+    .panic-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+    .panic-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .panic-heading { font-size: 22px; font-weight: 800; color: var(--red); }
+    .close-x {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--card); border: none; color: var(--muted);
+      font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    .breath-wrap { display: flex; flex-direction: column; align-items: center; padding: 16px 0 24px; }
+    .breath-ring {
+      width: 160px; height: 160px; border-radius: 50%;
+      border: 3px solid var(--primary);
+      background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0.04) 70%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; margin-bottom: 20px; transition: transform 4s ease-in-out;
+    }
+    .breath-ring.big { transform: scale(1.42); }
+    .breath-label { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .breath-num { font-size: 56px; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 6px; }
+    .breath-hint { color: var(--muted); font-size: 13px; }
+
+    .check-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: var(--card); border-radius: 14px; padding: 16px;
+      margin-bottom: 10px; cursor: pointer; transition: background 0.15s;
+    }
+    .check-item.done { background: rgba(16,185,129,0.1); }
+    .check-circle {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all 0.2s; margin-top: 1px;
+    }
+    .check-item.done .check-circle { background: var(--green); border-color: var(--green); color: #fff; }
+    .check-label { font-size: 15px; line-height: 1.45; }
+
+    .reminder-wrap {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88); z-index: 600;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .reminder-wrap.show { display: flex; animation: fadeIn 0.2s ease; }
+    .reminder-box {
+      background: var(--card); border-radius: 22px; padding: 26px 22px;
+      width: 100%; max-width: 360px; border: 2px solid var(--primary);
+    }
+    .reminder-title { font-size: 14px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .reminder-q { font-size: 18px; line-height: 1.5; margin-bottom: 22px; font-weight: 600; }
+
+    .summary-row { display: flex; gap: 10px; margin-bottom: 8px; }
+    .summary-cell { flex: 1; text-align: center; padding: 12px 6px; background: var(--card2); border-radius: 12px; }
+    .summary-cell .lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .summary-cell .val { font-weight: 700; font-size: 15px; }
+
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: var(--green); color: #fff; border-radius: 24px;
+      padding: 12px 24px; font-size: 15px; font-weight: 700;
+      z-index: 800; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    /* DROPDOWN */
+    .dropdown-toggle {
+      width: 100%; padding: 13px 16px; border-radius: 12px;
+      border: 2px solid var(--border); background: var(--card2);
+      color: var(--text); font-size: 15px; font-family: inherit;
+      cursor: pointer; text-align: left; display: flex;
+      justify-content: space-between; align-items: center;
+    }
+    .dropdown-toggle.has-selection { border-color: var(--primary); }
+    .dropdown-list {
+      display: none; margin-top: 6px; border-radius: 12px;
+      border: 2px solid var(--border); overflow: hidden;
+    }
+    .dropdown-list.open { display: block; }
+    .dropdown-opt {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 16px; background: var(--card2);
+      cursor: pointer; border-bottom: 1px solid var(--border);
+      font-size: 15px; transition: background 0.1s;
+    }
+    .dropdown-opt:last-child { border-bottom: none; }
+    .dropdown-opt.on { background: rgba(59,130,246,0.12); }
+    .dropdown-opt-circle {
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid var(--border); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; transition: all 0.15s;
+    }
+    .dropdown-opt.on .dropdown-opt-circle {
+      background: var(--primary); border-color: var(--primary); color: #fff;
+    }
+
+    /* STIKORD */
+    .stikord-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .stikord-btn {
+      background: rgba(139,92,246,0.15); border: 2px solid rgba(139,92,246,0.4);
+      border-radius: 22px; padding: 8px 14px; color: #a78bfa;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .stikord-btn:active { background: rgba(139,92,246,0.3); }
+
+    /* FAB BAR */
+    .fab-bar {
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center;
+      width: 100%; max-width: 480px;
+      background: #000; padding: 54px 16px 8px; gap: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+      z-index: 200;
+    }
+    .fab {
+      flex: 1; border-radius: 50px;
+      color: #fff; border: none;
+      font-size: 20px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; padding: 8px 4px;
+      transition: transform 0.1s, opacity 0.1s; font-family: inherit;
+    }
+    .fab span.fab-label { font-size: 12px; letter-spacing: 0.3px; opacity: 0.9; }
+    .fab:active { transform: scale(0.93); opacity: 0.8; }
+
+    /* IMPULS OVERLAY */
+    .impuls-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #08081a; z-index: 500; overflow-y: auto; padding: 20px 16px 40px;
+    }
+    .impuls-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+
+    /* GRIB OVERLAY */
+    .grib-overlay {
+      display: none; position: fixed; inset: 0;
+      background: #080c1a; z-index: 500; overflow-y: auto; padding: 20px 16px 48px;
+    }
+    .grib-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+    .grib-section { margin-bottom: 24px; }
+    .grib-heading { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+    .grib-body { font-size: 15px; color: var(--text); line-height: 1.6; }
+    .grib-quote { font-style: italic; color: var(--muted); font-size: 14px; margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--primary); }
+
+    /* TIMER */
+    .timer-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
+    .timer-val { font-size: 36px; font-weight: 800; min-width: 60px; text-align: center; }
+    .timer-btn {
+      width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border);
+      background: var(--card2); color: var(--text); font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-family: inherit;
+    }
+    .timer-unit-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .timer-unit-btn {
+      padding: 8px 18px; border-radius: 20px; border: 2px solid var(--border);
+      background: var(--card2); color: var(--muted); font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .timer-unit-btn.on { border-color: var(--purple); background: rgba(139,92,246,0.15); color: #a78bfa; }
+
+    /* YESNO */
+    .yesno-row { display: flex; gap: 10px; margin-top: 10px; }
+    .yn-btn {
+      flex: 1; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700;
+      cursor: pointer; border: 2px solid var(--border); background: var(--card2);
+      color: var(--text); font-family: inherit; transition: all 0.15s;
+    }
+    .yn-btn.yes.on { border-color: var(--green); background: rgba(16,185,129,0.15); color: var(--green); }
+    .yn-btn.no.on  { border-color: var(--red);   background: rgba(239,68,68,0.15);   color: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- PANIC OVERLAY -->
+<div class="panic-overlay" id="panicOverlay">
+  <div class="panic-top">
+    <div class="panic-heading">🆘 Panik-mode</div>
+    <button class="close-x" onclick="closePanic()">✕</button>
+  </div>
+
+  <div id="pFact">
+    <div class="card">
+      <div class="card-title" style="font-size:22px; line-height:1.3;">Er panikken baseret på fakta eller fantasi?</div>
+      <div class="card-sub">Stop op. Mærk efter. Hvad ved du med sikkerhed?</div>
+      <div class="big-btn-grid">
+        <button class="big-btn" onclick="panicNext('fakta')" style="padding:26px 10px; font-size:20px;">
+          📋<br><span style="font-size:14px; margin-top:6px; display:block;">Fakta</span>
+        </button>
+        <button class="big-btn" onclick="panicNext('fantasi')" style="padding:26px 10px; font-size:20px;">
+          💭<br><span style="font-size:14px; margin-top:6px; display:block;">Fantasi</span>
+        </button>
+      </div>
+    </div>
+    <div class="card" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);">
+      <p style="font-size:14px; color:var(--yellow); line-height:1.5;">
+        💡 Fantasi er ikke lig med forkert — det betyder blot at hjernen fylder huller ud med frygt. Sæt det på pause og ånd.
+      </p>
+    </div>
+  </div>
+
+  <div id="pBreath" style="display:none;">
+    <div class="card">
+      <div class="card-title">Vejrtrækning</div>
+      <div class="card-sub">Box-vejrtrækning · 4 runder · Tag det roligt</div>
+      <div class="breath-wrap">
+        <div class="breath-ring" id="bRing">😮</div>
+        <div class="breath-label" id="bLabel">Gør dig klar...</div>
+        <div class="breath-num" id="bNum">—</div>
+        <div class="breath-hint">Indånd 4 · Hold 4 · Udånd 4 · Hold 4</div>
+      </div>
+      <button class="btn-secondary" onclick="showChecklist()" style="margin-top:8px;">
+        Spring over → Videre til tjeklisten
+      </button>
+      <div id="bDone" style="display:none; text-align:center; padding:16px 0 4px;">
+        <p style="font-size:20px; margin-bottom:16px;">👍 Godt klaret!</p>
+        <button class="btn-primary" onclick="showChecklist()">Videre til tjeklisten →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pCheck" style="display:none;">
+    <div class="card">
+      <div class="card-title">Vend tilbage til situationen</div>
+      <div class="card-sub">Gå hvert punkt igennem</div>
+      <div id="checkItems"></div>
+      <button class="btn-primary" id="checkDoneBtn" onclick="closePanic()" style="display:none;">✅ Jeg er klar</button>
+    </div>
+    <div class="card" style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2);">
+      <div class="card-title" style="font-size:15px;">⏰ Påmindelser aktiveret</div>
+      <p style="font-size:14px; color:var(--muted); margin-bottom:12px;">Du modtager et spørgsmål hvert 5. minut.</p>
+      <button class="btn-secondary" style="margin-top:0;" onclick="stopReminders(); showToast('Påmindelser stoppet');">Stop påmindelser</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMINDER MODAL -->
+<div class="reminder-wrap" id="reminderWrap">
+  <div class="reminder-box">
+    <div class="reminder-title">⏰ 5-minutters check</div>
+    <div class="reminder-q" id="reminderQ"></div>
+    <div style="display:flex; gap:10px; margin-top:4px;">
+      <button class="yn-btn yes" onclick="closeReminder(true)" style="flex:1;">Ja</button>
+      <button class="yn-btn no"  onclick="closeReminder(false)" style="flex:1;">Nej</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPULS OVERLAY -->
+<div class="impuls-overlay" id="impulsOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:#a78bfa;">💡 Impuls</div>
+    <button class="close-x" onclick="closeImpuls()">✕</button>
+  </div>
+  <div id="impulsContent"></div>
+</div>
+
+<!-- OMSORG OVERLAY -->
+<div class="grib-overlay" id="gribOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:var(--primary);">🤝 OMSORG</div>
+    <button class="close-x" onclick="closeGrib()">✕</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;" id="omsorgCounters"></div>
+  <div style="padding:12px 16px; border-radius:12px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); margin-bottom:20px; font-size:15px; font-weight:700; color:var(--primary); text-align:center;">
+    💙 Husk du taler med hendes indre barn
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Lyt</div>
+    <div class="grib-body">Ikke for at svare. Ikke for at forklare. Lyt efter hvad hun faktisk sidder med.</div>
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Parkér dig selv</div>
+    <div class="grib-body">Dine intentioner, forklaringer, skyldfølelse, uro og behov for at blive forstået må vente.</div>
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Spørg ind til følelsen</div>
+    <div class="grib-quote">"Hvad gjorde det ved dig?"</div>
+    <div class="grib-quote">"Hvor ramte det dig mest?"</div>
+  </div>
+  <div style="padding:12px 16px; border-radius:12px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); margin-bottom:20px; font-size:15px; font-weight:700; color:var(--primary); text-align:center;">
+    💙 Husk du taler med hendes indre barn
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Ræk ud konkret</div>
+    <div class="grib-quote">"Vil du have, jeg holder om dig?"</div>
+    <div class="grib-quote">"Skal jeg bare sidde her med dig?"</div>
+    <div class="grib-quote">"Vil du have min hånd?"</div>
+  </div>
+  <div class="grib-section">
+    <div class="grib-heading">Skab ro til sidst</div>
+    <div class="grib-quote">"Jeg er her. Du skal ikke stå alene med det."</div>
+    <div class="grib-quote">"Tak fordi du sagde det. Jeg tager det alvorligt."</div>
+  </div>
+</div>
+
+<!-- ADFÆRD OVERLAY -->
+<div class="panic-overlay" id="adfaerdOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:var(--green);">🎯 Adfærd</div>
+    <button class="close-x" onclick="closeAdfaerd()">✕</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Registrér adfærd</div>
+    <div class="card-sub">Klik for at registrere — klik igen for at fortryde</div>
+    <div id="adfaerdBtns" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</div>
+
+<!-- FAB BAR -->
+<div class="fab-bar">
+  <div style="position:absolute;top:14px;left:0;right:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
+  <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
+  <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
+  <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
+  <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
+</div>
+
+<!-- EXPIRED REMINDERS MODAL -->
+<div class="panic-overlay" id="expiredModal">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:var(--yellow);">⏰ Reminders der venter</div>
+  </div>
+  <div id="expiredModalContent"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nb-home" onclick="goTo('home')"><span class="nav-icon">🏠</span><span>Hjem</span></button>
+  <button class="nav-btn" id="nb-checkin" onclick="goTo('checkin')"><span class="nav-icon">✏️</span><span>Check-in</span></button>
+  <button class="nav-btn" id="nb-daily" onclick="goTo('daily')"><span class="nav-icon">📊</span><span>Dagsoversigt</span></button>
+  <button class="nav-btn" id="nb-history" onclick="goTo('history')"><span class="nav-icon">📅</span><span>Historik</span></button>
+  <button class="nav-btn" id="nb-gpt" onclick="goTo('gpt')"><span class="nav-icon">🤖</span><span>GPT</span></button>
+</nav>
+
+<!-- HOME -->
+<div class="view active" id="view-home">
+  <div class="page-header">
+    <h1 id="homeGreet">God dag 👋</h1>
+    <p id="homeDate"></p>
+  </div>
+  <div id="homeUrgentCard" style="display:none;"></div>
+  <div class="card" id="homeKlarCard"></div>
+  <div class="card" id="homeSessionCard"></div>
+  <div class="card" id="homeRemindersCard"></div>
+  <div class="card" id="homeDailyCard">
+    <div class="card-title">Dagsoversigt</div>
+    <div id="homeDailyContent"></div>
+    <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
+  </div>
+  <div class="card" id="homeStopCard"></div>
+  <div id="homeScore"></div>
+</div>
+
+<!-- CHECK-IN -->
+<div class="view" id="view-checkin">
+  <div class="page-header">
+    <h1>Check-in</h1>
+    <p>Vælg et tidspunkt</p>
+  </div>
+  <div id="ciContent"></div>
+</div>
+
+<!-- DAILY -->
+<div class="view" id="view-daily">
+  <div class="page-header">
+    <h1>Dagsoversigt</h1>
+    <p>Hvordan gik dagen?</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Min generelle tilstand</div>
+    <div class="card-sub">Vælg alt der passer — sammen med partneren i dag</div>
+    <div class="chip-grid" id="myDailyGrid"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Hendes generelle tilstand</div>
+    <div class="card-sub">Vælg alt der passer — sådan oplevede du hende</div>
+    <div class="chip-grid" id="herDailyGrid"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Planlægning</div>
+    <div id="planningChecks"></div>
+  </div>
+  <button class="btn-primary" onclick="saveDailyAction()">💾 Gem dagsoversigt</button>
+</div>
+
+<!-- HISTORY -->
+<div class="view" id="view-history">
+  <div class="page-header">
+    <h1>Historik</h1>
+    <p>Dine seneste registreringer</p>
+  </div>
+  <div id="histContent"></div>
+</div>
+
+<!-- GPT -->
+<div class="view" id="view-gpt">
+  <div class="page-header">
+    <h1>GPT-coaches</h1>
+    <p>Vælg den der passer til situationen</p>
+  </div>
+  <a href="https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig" target="_blank" class="gpt-btn" style="margin-top:0; background:linear-gradient(135deg,#c2410c,#ea580c,#fb923c);">
+    <span class="gpt-icon">💪</span>
+    <div><div>Stærk og Handlekraftig</div><div class="gpt-sub">Din personlige coach</div></div>
+  </a>
+  <a href="https://chatgpt.com/g/g-6a03241336ec8191b447e5b0dc3faf17-besked-checker" target="_blank" class="gpt-btn" style="background:linear-gradient(135deg,#c2410c,#ea580c,#fb923c);">
+    <span class="gpt-icon">✅</span>
+    <div><div>Besked Checker</div><div class="gpt-sub">Tjek din besked inden du sender</div></div>
+  </a>
+  <a href="https://chatgpt.com/g/g-69f70c0bcdd88191adeff770d764679f-omsorg-eller-bullshit" target="_blank" class="gpt-btn" style="background:linear-gradient(135deg,#c2410c,#ea580c,#fb923c);">
+    <span class="gpt-icon">🔍</span>
+    <div><div>Omsorg eller Bullshit</div><div class="gpt-sub">Få et ærligt tjek på din tilgang</div></div>
+  </a>
+</div>
+
+<script>
+const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
+function openGPT(text) {
+  if (text) {
+    try { navigator.clipboard.writeText(text); } catch(e) {}
+    showToast('📋 Tekst kopieret — indsæt i GPT');
+  }
+  window.open(GPT, '_blank');
+}
+
+const SESSIONS = ['Morgen','Formiddag','Eftermiddag','Aften','Før sengetid'];
+const S_ICONS  = ['🌅','☀️','🌤️','🌆','🌙'];
+
+const OBSERVATIONS = [
+  'Lukket','Fjern','Overskud','Kommunikerende','Åben',
+  'Øjenkontakt','Imødekommende','Hård stemmeføring','Let stemmeføring','Glad',
+  'Stille','Blid','Vred','Såret','Sårbar','Ked af det','Frustreret'
+];
+
+// Responses with scores
+const RESPONSES = [
+  { label: 'Italesatte observationen', score: +10 },
+  { label: 'Nærværende Aktiv',         score: +10 },
+  { label: 'Nærværende',              score: +10 },
+  { label: 'Lyttende',                score: +10 },
+  { label: 'Blev afventende',          score: -10 },
+  { label: 'Trak mig',                 score: -10 },
+  { label: 'Gik i forsvar',            score: -10 },
+  { label: 'Forklarede',               score: -10 },
+];
+
+// Outcomes with scores
+const OUTCOMES = [
+  { label: 'Landede godt',    score: +10 },
+  { label: 'Landede roligt',  score: +10 },
+  { label: 'Følte sig mødt',  score: +10 },
+  { label: 'Følte sig ikke mødt', score: -20 },
+  { label: 'Endte i konflikt',   score: -20 },
+  { label: 'Endte i tavshed',    score: -20 },
+];
+
+// Initiative (tracking only, no score)
+const INITIATIVES = [
+  { label: 'Du har nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!' },
+  { label: 'Du var der for mig tidligere i dag, jeg er i stand til at være der for dig nu?' },
+  { label: 'Jeg vil gerne gengælde den omsorg du viste mig tidligere i dag, har du brug for at ...?' },
+  { label: 'Uselvisk, uopfordret initiativ' },
+  { label: 'Tilbyde min assistance', script: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
+  { label: 'Tage lead på eget initiativ', script: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
+];
+
+// Internal state (single select, no score — tracking only)
+const MY_STATES = ['Voksen','Barn'];
+
+// Daily: my state with scores
+const MY_DAILY = [
+  { label: 'Rolig',          score: +10 },
+  { label: 'Voksen',         score: +10 },
+  { label: 'Glad',           score: +10 },
+  { label: 'Åben',           score: +10 },
+  { label: 'Tilbagetrukket', score: -10 },
+  { label: 'Usikker',        score: -10 },
+  { label: 'Barn',           score: -10 },
+  { label: 'Vred',           score: -10 },
+  { label: 'Såret',          score: -10 },
+];
+
+// Daily: her state with scores
+const HER_DAILY = [
+  { label: 'Rolig',          score: +10 },
+  { label: 'Glad',           score: +10 },
+  { label: 'Åben',           score: +10 },
+  { label: 'Sårbar',         score: +10 },
+  { label: 'Tilbagetrukket', score: -10 },
+  { label: 'Voksen',         score: -10 },
+  { label: 'Såret',          score: -10 },
+  { label: 'Vred',           score: -10 },
+];
+
+// Checklist styres via checkState — ikke et array af items
+
+const REMINDERS = [
+  'Er du rolig i dig selv lige nu?',
+  'Kan du være der for den anden, uden at panikke igen?',
+  'Har du mærket efter nede i kroppen?',
+  'Er det dit eget behov — eller for din partners skyld?'
+];
+
+// ---- DATA ----
+function getData() { try { return JSON.parse(localStorage.getItem('vaekst') || '{}'); } catch { return {}; } }
+function setData(d) { try { localStorage.setItem('vaekst', JSON.stringify(d)); } catch {} }
+function todayKey() { return new Date().toISOString().slice(0,10); }
+function getEntries() { return getData().entries || []; }
+function getDailies() { return getData().dailies || {}; }
+
+function saveEntry(entry) {
+  const d = getData();
+  if (!d.entries) d.entries = [];
+  d.entries = d.entries.filter(e => !(e.date === entry.date && e.session === entry.session));
+  d.entries.push(entry);
+  setData(d);
+}
+
+function todaysDone() {
+  return getEntries().filter(e => e.date === todayKey()).map(e => e.session);
+}
+
+function todaysSkipped() {
+  const d = getData();
+  return (d.skipped || {})[todayKey()] || [];
+}
+
+function skipSession(s) {
+  const d = getData();
+  if (!d.skipped) d.skipped = {};
+  const arr = d.skipped[todayKey()] || [];
+  const i = arr.indexOf(s);
+  if (i > -1) arr.splice(i, 1); else arr.push(s);
+  d.skipped[todayKey()] = arr;
+  setData(d);
+  renderHome();
+  showSessionPicker();
+}
+
+function calcEntryScore(entry) {
+  const respScore = (entry.responses || []).reduce((sum, r) => {
+    const found = RESPONSES.find(x => x.label === r);
+    return sum + (found ? found.score : 0);
+  }, 0);
+  const outcomeScore = (entry.outcomes || []).reduce((sum, o) => {
+    const found = OUTCOMES.find(x => x.label === o);
+    return sum + (found ? found.score : 0);
+  }, 0);
+  return respScore + outcomeScore;
+}
+
+function calcDailyScore(daily) {
+  if (!daily) return 0;
+  let score = 0;
+  (daily.myStates || []).forEach(s => {
+    const found = MY_DAILY.find(x => x.label === s);
+    if (found) score += found.score;
+  });
+  (daily.herStates || []).forEach(s => {
+    const found = HER_DAILY.find(x => x.label === s);
+    if (found) score += found.score;
+  });
+  return score;
+}
+
+function calcTodayTotal() {
+  const today = todayKey();
+  const entries = getEntries().filter(e => e.date === today);
+  const ciScore = entries.reduce((sum, e) => sum + calcEntryScore(e), 0);
+  const daily = getDailies()[today];
+  return ciScore + calcDailyScore(daily) + getImpulsScore() + getAdfaerdScore();
+}
+
+function scoreStyle(score) {
+  if (score > 0) return 'score-pos';
+  if (score < 0) return 'score-neg';
+  return 'score-zero';
+}
+
+function scoreColor(score) {
+  if (score > 0) return 'var(--green)';
+  if (score < 0) return 'var(--red)';
+  return 'var(--muted)';
+}
+
+// ---- NAVIGATION ----
+function goTo(name, session) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nb-' + name).classList.add('active');
+  const renders = { home: renderHome, checkin: () => renderCheckin(session), daily: initDaily, history: renderHistory, gpt: renderGpt };
+  renders[name] && renders[name]();
+}
+
+// ---- HOME ----
+function renderHome() {
+  const now = new Date();
+  const h = now.getHours();
+  const greet = h < 10 ? 'God morgen' : h < 14 ? 'God formiddag' : h < 18 ? 'God eftermiddag' : h < 21 ? 'God aften' : 'God nat';
+  document.getElementById('homeGreet').textContent = greet + ' 👋';
+  document.getElementById('homeDate').textContent = now.toLocaleDateString('da-DK', {weekday:'long',day:'numeric',month:'long'});
+
+  const total = calcTodayTotal();
+  const color = scoreColor(total);
+  const sign = total > 0 ? '+' : '';
+  document.getElementById('homeScore').innerHTML = `
+    <div class="score-big card" style="background: ${total > 0 ? 'rgba(16,185,129,0.08)' : total < 0 ? 'rgba(239,68,68,0.08)' : 'var(--card)'}; border: 2px solid ${total > 0 ? 'rgba(16,185,129,0.3)' : total < 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)'};">
+      <div class="score-number" style="color:${color};">${sign}${total}</div>
+      <div class="score-label">Dagens samlede score</div>
+    </div>
+  `;
+
+  const klarChecked = _getKlarItems();
+  const klarSubs = _getKlarSubs();
+  const klarFokus = _getKlarFokus();
+  const klarDone = klarChecked.length === KLAR_ITEMS.length && klarFokus.trim();
+  document.getElementById('homeKlarCard').innerHTML = `
+    <button class="dropdown-toggle ${klarDone ? 'has-selection' : ''}" onclick="toggleDropdown('klarDropdown')" style="width:100%;">
+      <span style="font-weight:700;">Klar til dagen &nbsp;<span style="color:var(--muted);font-size:13px;font-weight:400;">${klarChecked.length + (klarFokus.trim() ? 1 : 0)}/${KLAR_ITEMS.length}</span></span>
+      <span>${klarDone ? '✅' : '▾'}</span>
+    </button>
+    <div class="dropdown-list" id="klarDropdown">
+      ${KLAR_ITEMS.map(item => {
+        if (item.type === 'text') {
+          return `<div class="dropdown-opt" style="flex-direction:column;align-items:flex-start;gap:8px;cursor:default;" onclick="event.stopPropagation()">
+            <div style="font-weight:700;font-size:14px;">${item.label}</div>
+            <input type="text" value="${klarFokus.replace(/"/g,'&quot;')}" placeholder="Skriv dit fokuspunkt..." oninput="onFokusInput(this.value)"
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--green);font-size:14px;font-weight:600;font-family:inherit;">
+          </div>`;
+        } else if (typeof item === 'string') {
+          const on = klarChecked.includes(item);
+          return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.replace(/'/g, "\\'")}')">
+            <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+            <div>${item}</div>
+          </div>`;
+        } else if (item.info !== undefined) {
+          // Object with info text
+          const on = klarChecked.includes(item.label);
+          return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.label.replace(/'/g,"\\'")}')">
+            <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+            <div>
+              <div>${item.label}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;white-space:pre-line;line-height:1.5;">${item.info}</div>
+            </div>
+          </div>`;
+        } else {
+          // Object item with subs
+          const parentOn = klarChecked.includes(item.label);
+          const chosenSub = klarSubs[item.label] || null;
+          return `<div style="border-bottom:1px solid var(--border);">
+            <div class="dropdown-opt ${parentOn ? 'on' : ''}" style="cursor:default;">
+              <div class="dropdown-opt-circle">${parentOn ? '✓' : ''}</div>
+              <div style="font-weight:700;">${item.label}</div>
+            </div>
+            ${item.subs.map(sub => {
+              const on = chosenSub === sub;
+              return `<div class="dropdown-opt ${on ? 'on' : ''}" style="padding-left:32px;font-size:13px;" onclick="selectKlarSub('${item.label.replace(/'/g,"\\'")}','${sub.replace(/'/g,"\\'")}')">
+                <div class="dropdown-opt-circle" style="width:18px;height:18px;">${on ? '✓' : ''}</div>
+                <div style="line-height:1.4;">${sub}</div>
+              </div>`;
+            }).join('')}
+          </div>`;
+        }
+      }).join('')}
+    </div>
+    ${klarFokus.trim() ? `<div id="klarFokusDisplay" style="margin-top:10px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--green);font-size:15px;font-weight:700;line-height:1.4;">🎯 ${klarFokus}</div>` : `<div id="klarFokusDisplay" style="display:none;"></div>`}
+  `;
+
+  const done = todaysDone();
+  const skipped = todaysSkipped();
+  const today = todayKey();
+  const entries = getEntries().filter(e => e.date === today);
+
+  const doneCount = done.length;
+  const dots = SESSIONS.map((s,i) => {
+    const isDone = done.includes(s);
+    const isSkipped = skipped.includes(s);
+    return `<span style="font-size:16px;">${isDone ? S_ICONS[i] : isSkipped ? '⊘' : '○'}</span>`;
+  }).join('');
+  const sessionRows = SESSIONS.map((s,i) => {
+    const isDone = done.includes(s);
+    const isSkipped = skipped.includes(s);
+    const entry = entries.find(e => e.session === s);
+    const sc = entry ? calcEntryScore(entry) : null;
+    const scoreHtml = sc !== null
+      ? `<span class="session-score ${scoreStyle(sc)}">${sc > 0 ? '+' : ''}${sc}</span>`
+      : '';
+    return `
+      <div class="session-row ${isDone ? 'done' : ''}" style="${isSkipped ? 'opacity:0.5;' : ''}" onclick="goTo('checkin','${s}')">
+        <span class="session-emoji">${S_ICONS[i]}</span>
+        <span class="session-name" style="${isSkipped ? 'text-decoration:line-through;' : ''}">${s}</span>
+        ${scoreHtml}
+        <span class="session-check" style="color:${isDone ? 'var(--green)' : isSkipped ? 'var(--muted)' : 'var(--border)'};">${isDone ? '✓' : isSkipped ? '⊘' : '→'}</span>
+      </div>`;
+  }).join('');
+  document.getElementById('homeSessionCard').innerHTML = `
+    <button class="dropdown-toggle" onclick="toggleDropdown('sessionDropdown')" style="width:100%;">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span style="font-weight:700;">Dagens check-ins</span>
+        <span style="display:flex;gap:4px;align-items:center;">${dots}</span>
+        <span style="color:var(--muted);font-size:13px;">${doneCount}/${SESSIONS.length}</span>
+      </span>
+      <span>▾</span>
+    </button>
+    <div class="dropdown-list" id="sessionDropdown">${sessionRows}</div>
+  `;
+
+
+  const sc = getStopCounts();
+  const ac = getAdfaerdCounts();
+  const oc = getOmsorgCounts();
+  const sep = `<span style="color:var(--muted);font-size:14px;font-weight:400;"> – </span>`;
+  document.getElementById('homeStopCard').innerHTML = `
+    <div class="card-title">💪 Impuls og adfærdskontrol</div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;margin-bottom:6px;">dag &nbsp;–&nbsp; uge</div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">IMPULSER</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">✋ Standsede</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green);">${sc.todayStopped}${sep}${sc.weekStopped}</div>
+      </div>
+      <div style="text-align:center;padding:10px 6px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke</div>
+        <div style="font-size:22px;font-weight:800;color:var(--red);">${sc.todayNotStopped}${sep}${sc.weekNotStopped}</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">OMSORG</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="text-align:center;padding:10px 6px;background:rgba(59,130,246,0.08);border-radius:12px;border:1px solid rgba(59,130,246,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">🤝 Modtog</div>
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">${oc.modtog.d}${sep}${oc.modtog.w}</div>
+      </div>
+      <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">💚 Gav</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green);">${oc.gav.d}${sep}${oc.gav.w}</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">ADFÆRD</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🟢 Nærværende</span>
+        <span style="font-size:16px;font-weight:800;color:var(--green);">${ac.naervaerende.d}${sep}${ac.naervaerende.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(245,158,11,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🟡 Lyttende passiv</span>
+        <span style="font-size:16px;font-weight:800;color:var(--yellow);">${ac.lyttende.d}${sep}${ac.lyttende.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🔴 Lukket ned</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lukket.d}${sep}${ac.lukket.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(59,130,246,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🔵 Voksen</span>
+        <span style="font-size:16px;font-weight:800;color:var(--primary);">${ac.voksen.d}${sep}${ac.voksen.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(100,116,139,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">⚪ Indre barn</span>
+        <span style="font-size:16px;font-weight:800;color:var(--muted);">${ac.indreBarn.d}${sep}${ac.indreBarn.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(139,92,246,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🛑 Standsede automatadfærd</span>
+        <span style="font-size:16px;font-weight:800;color:#8b5cf6;">${ac.standsede.d}${sep}${ac.standsede.w}</span>
+      </div>
+    </div>
+  `;
+
+  const daily = getDailies()[today];
+  if (daily && ((daily.myStates && daily.myStates.length) || (daily.herStates && daily.herStates.length))) {
+    const ds = calcDailyScore(daily);
+    document.getElementById('homeDailyContent').innerHTML = `
+      <div class="summary-row">
+        <div class="summary-cell">
+          <div class="lbl">Din tilstand</div>
+          <div class="val" style="color:var(--green); font-size:13px;">${(daily.myStates||[]).join(', ') || '–'}</div>
+        </div>
+        <div class="summary-cell">
+          <div class="lbl">Hendes tilstand</div>
+          <div class="val" style="color:var(--primary); font-size:13px;">${(daily.herStates||[]).join(', ') || '–'}</div>
+        </div>
+      </div>
+      <div style="text-align:center; font-size:13px; color:${scoreColor(ds)}; font-weight:700;">
+        Dagsoversigtsscore: ${ds > 0 ? '+' : ''}${ds}
+      </div>
+    `;
+  } else {
+    document.getElementById('homeDailyContent').innerHTML = '<p style="color:var(--muted); font-size:14px;">Ikke udfyldt endnu</p>';
+  }
+
+  // Reminders
+  const allRems = _getAllRems();
+  const today2 = todayKey();
+  const now2 = new Date();
+  const hhmm2 = now2.getHours().toString().padStart(2,'0') + ':' + now2.getMinutes().toString().padStart(2,'0');
+  const isOverdue = r => !r.done && !r.meldtTilbage && (r.date < today2 || (r.date === today2 && r.time && r.time <= hhmm2));
+  const sortedRems = [...allRems].sort((a,b) => (isOverdue(b)?1:0) - (isOverdue(a)?1:0));
+  const hasOverdue = sortedRems.some(isOverdue);
+
+  const remCard = document.getElementById('homeRemindersCard');
+  remCard.classList.remove('overdue-card');
+
+  const nonOverdueRems = sortedRems.filter(r => !isOverdue(r));
+  remCard.innerHTML = `
+    <div class="card-title">⏰ Reminders</div>
+    ${nonOverdueRems.length ? nonOverdueRems.map(r => {
+      const overdue = isOverdue(r);
+      const ckBtn = (active, color, rgb, label, fn) =>
+        `<button onclick="${fn}(${r.id})" style="flex:1;padding:6px 4px;border-radius:8px;border:2px solid ${active?color:`rgba(${rgb},0.3)`};background:${active?`rgba(${rgb},0.15)`:'transparent'};color:${active?color:'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${active?'✓ ':''} ${label}</button>`;
+      const dateLabel = r.date !== today2 ? `<span style="font-size:11px;font-weight:700;color:${overdue?'var(--red)':'var(--primary)'};margin-left:6px;">${r.date}</span>` : '';
+      return `
+      <div style="padding:12px 0;border-bottom:1px solid var(--border);${overdue?'padding-left:10px;border-left:4px solid var(--red);':''}">
+        ${overdue ? `<div style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:0.05em;margin-bottom:4px;">⚠ OVERSKREDET</div>` : ''}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+          <div style="${r.done?'text-decoration:line-through;color:var(--muted);':''}font-size:${overdue?'15':'14'}px;font-weight:${overdue?'700':'600'};flex:1;">${r.text}${r.time?` <span style="font-size:12px;font-weight:400;color:${overdue?'var(--red)':'var(--muted)'};">⏰ ${r.time}</span>`:''}${dateLabel}</div>
+          <button onclick="deleteReminder(${r.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 0 0 8px;flex-shrink:0;">✕</button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${ckBtn(r.done,        'var(--green)',   '16,185,129', 'Done',          'toggleReminderDone')}
+          ${ckBtn(r.meldtTilbage,'var(--primary)', '59,130,246', 'Meldt tilbage', 'toggleReminderMeldt')}
+          <button onclick="snoozeReminder(${r.id})" style="flex:1;padding:6px 4px;border-radius:8px;border:2px solid rgba(245,158,11,0.4);background:${_snoozingId===r.id?'rgba(245,158,11,0.15)':'transparent'};color:var(--yellow);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⏱ Udsæt</button>
+          <span style="font-size:22px;transition:opacity 0.2s;${r.done && r.meldtTilbage ? 'opacity:1;' : 'opacity:0;'}">👍</span>
+        </div>
+        ${_snoozingId===r.id ? `<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+          <input type="time" id="snoozeTime_${r.id}" value="${r.time||''}" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
+          <input type="date" id="snoozeDate_${r.id}" value="${r.date||today2}" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
+          <button onclick="confirmSnooze(${r.id})" style="padding:6px 12px;border-radius:8px;border:none;background:var(--yellow);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Gem</button>
+        </div>` : ''}
+      </div>`;
+    }).join('') : `<p style="color:var(--muted);font-size:14px;margin-bottom:8px;">${hasOverdue ? 'Øvrige reminders vises herunder' : 'Ingen reminders endnu'}</p>`}
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+      <input id="newRemText" type="text" placeholder="Stikord..." style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="newRemDate" type="date" value="${today2}" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
+        <input id="newRemTime" type="time" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;">
+        <button onclick="addReminder()" style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:24px;cursor:pointer;flex-shrink:0;line-height:1;">+</button>
+      </div>
+    </div>
+  `;
+
+  // Urgent-kort øverst ved overdue
+  const urgentCard = document.getElementById('homeUrgentCard');
+  if (hasOverdue) {
+    const overdueRems = sortedRems.filter(isOverdue);
+    urgentCard.style.display = 'block';
+    urgentCard.innerHTML = `<div class="card overdue-card">
+      <div class="card-title" style="color:var(--red);">⏰ Reminders &nbsp;<span style="font-size:13px;background:var(--red);color:#fff;padding:2px 8px;border-radius:20px;font-weight:700;">OVERSKREDET</span></div>
+      ${overdueRems.map(r => {
+        const ckBtn = (active, color, rgb, label, fn) =>
+          `<button onclick="${fn}(${r.id})" style="flex:1;padding:6px 4px;border-radius:8px;border:2px solid ${active?color:`rgba(${rgb},0.3)`};background:${active?`rgba(${rgb},0.15)`:'transparent'};color:${active?color:'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${active?'✓ ':''} ${label}</button>`;
+        return `<div style="padding:12px 0;border-bottom:1px solid rgba(239,68,68,0.2);">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:15px;font-weight:700;flex:1;">${r.text}${r.time?` <span style="font-size:13px;color:var(--red);">⏰ ${r.time}</span>`:''}${r.date!==today2?` <span style="font-size:12px;color:var(--red);">${r.date}</span>`:''}</div>
+            <button onclick="deleteReminder(${r.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 0 0 8px;">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${ckBtn(r.done,        'var(--green)',  '16,185,129', 'Done',          'toggleReminderDone')}
+            ${ckBtn(r.meldtTilbage,'var(--primary)','59,130,246', 'Meldt tilbage', 'toggleReminderMeldt')}
+            <button onclick="snoozeReminder(${r.id})" style="flex:1;padding:6px 4px;border-radius:8px;border:2px solid rgba(245,158,11,0.4);background:${_snoozingId===r.id?'rgba(245,158,11,0.15)':'transparent'};color:var(--yellow);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⏱ Udsæt</button>
+            <span style="font-size:22px;${r.done&&r.meldtTilbage?'opacity:1':'opacity:0'}">👍</span>
+          </div>
+          ${_snoozingId===r.id ? `<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+            <input type="time" id="snoozeTime_${r.id}" value="${r.time||''}" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
+            <input type="date" id="snoozeDate_${r.id}" value="${r.date||today2}" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;">
+            <button onclick="confirmSnooze(${r.id})" style="padding:6px 12px;border-radius:8px;border:none;background:var(--yellow);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Gem</button>
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  } else {
+    urgentCard.style.display = 'none';
+    urgentCard.innerHTML = '';
+  }
+}
+
+// ---- REMINDERS ----
+const _notifiedRems = new Set();
+const _alarmCooldown = new Map();
+let _allRems = null;
+let _snoozingId = null;
+
+function _getAllRems() {
+  if (_allRems === null) _allRems = getData().reminders || [];
+  return _allRems;
+}
+
+function saveReminders() {
+  const d = getData();
+  d.reminders = _allRems;
+  setData(d);
+}
+
+function addReminder() {
+  const text = document.getElementById('newRemText').value.trim();
+  const date = document.getElementById('newRemDate').value || todayKey();
+  const time = document.getElementById('newRemTime').value;
+  if (!text) return;
+  _getAllRems().push({ id: Date.now(), text, time, date, done: false, meldtTilbage: false });
+  saveReminders();
+  renderHome();
+}
+
+function deleteReminder(id) {
+  _allRems = _getAllRems().filter(r => r.id !== id);
+  saveReminders();
+  renderHome();
+}
+
+function toggleReminderDone(id) {
+  _getAllRems().forEach(r => { if (r.id === id) r.done = !r.done; });
+  saveReminders();
+  renderHome();
+}
+function toggleReminderMeldt(id) {
+  _getAllRems().forEach(r => { if (r.id === id) r.meldtTilbage = !r.meldtTilbage; });
+  saveReminders();
+  renderHome();
+}
+function snoozeReminder(id) {
+  _snoozingId = (_snoozingId === id) ? null : id;
+  renderHome();
+}
+function confirmSnooze(id) {
+  const timeEl = document.getElementById('snoozeTime_' + id);
+  const dateEl = document.getElementById('snoozeDate_' + id);
+  _getAllRems().forEach(r => {
+    if (r.id === id) {
+      if (timeEl && timeEl.value) r.time = timeEl.value;
+      if (dateEl && dateEl.value) r.date = dateEl.value;
+    }
+  });
+  _snoozingId = null;
+  saveReminders();
+  renderHome();
+}
+
+function getExpiredRems() {
+  const today = todayKey();
+  const now = new Date();
+  const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  return _getAllRems().filter(r => {
+    if (r.done || r.meldtTilbage) return false;
+    if (r.date < today) return true;
+    if (r.date === today && r.time && r.time <= hhmm) return true;
+    return false;
+  });
+}
+
+function checkExpiredReminders() {
+  const expired = getExpiredRems();
+  if (!expired.length) return;
+  renderExpiredModal(expired);
+  document.getElementById('expiredModal').classList.add('show');
+}
+
+function renderExpiredModal(expired) {
+  const inp = s => `style="padding:9px;border-radius:9px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;"`;
+  document.getElementById('expiredModalContent').innerHTML = expired.map(r => `
+    <div class="card" style="border:2px solid rgba(245,158,11,0.4);">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">📌 ${r.text}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Deadline: ${r.date}${r.time ? ' kl. ' + r.time : ''}</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <input type="date" id="reDate_${r.id}" value="${todayKey()}" ${inp()}>
+        <input type="time" id="reTime_${r.id}" value="${r.time||''}" ${inp()}>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="rescheduleReminder(${r.id})" class="btn-primary" style="flex:1;margin:0;">📅 Ny deadline</button>
+        <button onclick="deleteReminderModal(${r.id})" class="btn-secondary" style="flex:1;margin:0;">🗑 Slet</button>
+      </div>
+    </div>`).join('');
+}
+
+function rescheduleReminder(id) {
+  const date = document.getElementById('reDate_' + id).value || todayKey();
+  const time = document.getElementById('reTime_' + id).value;
+  _getAllRems().forEach(r => { if (r.id === id) { r.date = date; r.time = time; r.done = false; r.meldtTilbage = false; } });
+  _notifiedRems.delete(id); _alarmCooldown.delete(id);
+  saveReminders();
+  const still = getExpiredRems();
+  if (still.length) renderExpiredModal(still);
+  else { document.getElementById('expiredModal').classList.remove('show'); renderHome(); }
+}
+
+function deleteReminderModal(id) {
+  _allRems = _getAllRems().filter(r => r.id !== id);
+  saveReminders();
+  const still = getExpiredRems();
+  if (still.length) renderExpiredModal(still);
+  else { document.getElementById('expiredModal').classList.remove('show'); renderHome(); }
+}
+
+function playAlarmBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (freq, start, dur) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.4, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + dur);
+    };
+    beep(880, 0,    0.18);
+    beep(880, 0.22, 0.18);
+    beep(1100, 0.5, 0.3);
+  } catch(e) {}
+}
+
+function checkReminderAlarms() {
+  const now = new Date();
+  const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  _getAllRems().forEach(r => {
+    if (!r.time || r.done || r.meldtTilbage) return;
+    const alarmPassed = r.time <= hhmm;
+    if (!alarmPassed) return;
+    const last = _alarmCooldown.get(r.id) || 0;
+    const cooldownOk = !_notifiedRems.has(r.id) || (Date.now() - last) > 2 * 60 * 1000;
+    if (cooldownOk) {
+      _notifiedRems.add(r.id);
+      _alarmCooldown.set(r.id, Date.now());
+      playAlarmBeep();
+      showToast('⏰ ' + r.text);
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted')
+        new Notification('Vækst reminder', { body: r.text });
+    }
+  });
+}
+setInterval(checkReminderAlarms, 30000);
+if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+// ---- CHECK-IN ----
+let ci = { session: null, step: 0, obs: [], exchange: [], responses: [], outcomes: [], initiatives: [], state: null };
+
+function renderCheckin(preselect) {
+  ci = { session: null, step: 0, obs: [], exchange: [], responses: [], outcomes: [], initiatives: [], state: null };
+  if (preselect) {
+    ci.session = preselect;
+    showCiForm();
+  } else {
+    showSessionPicker();
+  }
+}
+
+function showSessionPicker() {
+  const done = todaysDone();
+  document.querySelector('#view-checkin .page-header p').textContent = 'Vælg et tidspunkt';
+  const skipped = todaysSkipped();
+  document.getElementById('ciContent').innerHTML = `
+    <div class="session-grid">
+      ${SESSIONS.map((s,i) => {
+        const isDone = done.includes(s);
+        const isSkipped = skipped.includes(s);
+        return `<div style="display:flex;flex-direction:column;gap:6px;">
+          <button class="session-btn ${isDone ? 'done' : isSkipped ? '' : ''}" style="${isSkipped ? 'opacity:0.45;text-decoration:line-through;' : ''}" onclick="selectSession('${s}')">
+            <span>${S_ICONS[i]}</span><span>${s}</span>
+          </button>
+          <button onclick="skipSession('${s}')" style="padding:6px;border-radius:10px;border:1px solid ${isSkipped ? 'var(--primary)' : 'var(--border)'};background:${isSkipped ? 'rgba(59,130,246,0.12)' : 'transparent'};color:${isSkipped ? 'var(--primary)' : 'var(--muted)'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+            ${isSkipped ? '↩ Fortryd skip' : '⊘ Skip'}
+          </button>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function selectSession(s) {
+  ci.session = s;
+  ci.step = 0;
+  ci.obs = [];
+  ci.exchange = [];
+  ci.responses = [];
+  ci.outcomes = [];
+  ci.initiatives = [];
+  ci.state = null;
+  showCiForm();
+}
+
+function showCiForm() {
+  document.querySelector('#view-checkin .page-header p').textContent = ci.session;
+  renderCiStep();
+}
+
+function renderCiStep() {
+  const TOTAL = 6;
+  const dots = Array.from({length: TOTAL}, (_,i) =>
+    `<div class="step-dot ${i < ci.step ? 'done' : i === ci.step ? 'now' : ''}"></div>`
+  ).join('');
+
+  let body = '';
+
+  if (ci.step === 0) {
+    const EXCHANGE_Q = [
+      'Har jeg modtaget sparring eller omsorg?',
+      'Har jeg bedt hende om at yde noget?',
+      'Har jeg ydet noget for hende?',
+      'Har hun bedt mig om at yde noget?',
+      'Har jeg givet hende sparring eller omsorg?',
+    ];
+    body = `
+      <div class="card">
+        <div class="card-title">Givet og modtaget</div>
+        <div class="card-sub">Vælg alt der passer — tæller i antal</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;margin-bottom:16px;">
+          ${EXCHANGE_Q.map(q => {
+            const on = ci.exchange.includes(q);
+            return `<button onclick="toggleExchange('${q.replace(/'/g,"\\'")}'); renderCiStep();"
+              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--primary)' : 'var(--border)'};background:${on ? 'rgba(59,130,246,0.12)' : 'var(--card2)'};color:${on ? 'var(--primary)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+              ${on ? '✓ ' : ''}${q}
+            </button>`;
+          }).join('')}
+        </div>
+        <button class="btn-primary" onclick="ciNext()">Videre →</button>
+        <button class="btn-secondary" onclick="showSessionPicker()">← Vælg andet tidspunkt</button>
+      </div>
+    `;
+  } else if (ci.step === 1) {
+    body = `
+      <div class="card">
+        <div class="card-title">${S_ICONS[SESSIONS.indexOf(ci.session)]} Observationer</div>
+        <div class="card-sub">Hvad observerede du hos din partner? Vælg alt der passer</div>
+        <div class="chip-grid">
+          ${OBSERVATIONS.map(o => `
+            <button class="chip ${ci.obs.includes(o) ? 'on' : ''}" onclick="toggleObs('${o}')">${o}</button>`
+          ).join('')}
+        </div>
+        <button class="btn-primary" ${ci.obs.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
+        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
+      </div>
+    `;
+  } else if (ci.step === 2) {
+    const currentScore = ci.responses.reduce((s, r) => {
+      const found = RESPONSES.find(x => x.label === r);
+      return s + (found ? found.score : 0);
+    }, 0);
+    const scoreHtml = ci.responses.length > 0
+      ? `<div style="text-align:center; font-weight:700; font-size:16px; color:${scoreColor(currentScore)}; margin-bottom:12px;">
+           Score: ${currentScore > 0 ? '+' : ''}${currentScore}
+         </div>`
+      : '';
+    body = `
+      <div class="card">
+        <div class="card-title">Din reaktion</div>
+        <div class="card-sub">Hvad gjorde du? Vælg alt der passer</div>
+        ${scoreHtml}
+        <div class="chip-grid">
+          ${RESPONSES.map(r => {
+            const isOn = ci.responses.includes(r.label);
+            const cls = r.score > 0 ? 'chip pos' : 'chip neg';
+            return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleResp('${r.label}')">
+              ${r.score > 0 ? '✚' : '−'} ${r.label}
+            </button>`;
+          }).join('')}
+        </div>
+        <button class="btn-primary" ${ci.responses.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
+        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
+      </div>
+    `;
+  } else if (ci.step === 3) {
+    const outcomeScore = ci.outcomes.reduce((s, o) => {
+      const found = OUTCOMES.find(x => x.label === o);
+      return s + (found ? found.score : 0);
+    }, 0);
+    const scoreHtml = ci.outcomes.length > 0
+      ? `<div style="text-align:center; font-weight:700; font-size:16px; color:${scoreColor(outcomeScore)}; margin-bottom:12px;">
+           Score: ${outcomeScore > 0 ? '+' : ''}${outcomeScore}
+         </div>`
+      : '';
+    body = `
+      <div class="card">
+        <div class="card-title">Udfald</div>
+        <div class="card-sub">Hvordan landede det? Vælg alt der passer</div>
+        ${scoreHtml}
+        <div class="chip-grid">
+          ${OUTCOMES.map(o => {
+            const isOn = ci.outcomes.includes(o.label);
+            const cls = o.score > 0 ? 'chip pos' : 'chip neg';
+            return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleOutcome('${o.label}')">
+              ${o.score > 0 ? '✚' : '−'} ${o.label}
+            </button>`;
+          }).join('')}
+        </div>
+        <button class="btn-primary" ${ci.outcomes.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
+        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
+      </div>
+    `;
+  } else if (ci.step === 4) {
+    body = `
+      <div class="card">
+        <div class="card-title">Tilstand & Initiativ</div>
+        <div class="card-sub" style="margin-bottom:8px;">Hvad mærkede du i dig selv?</div>
+        <div class="big-btn-grid" style="margin-bottom:20px;">
+          <button class="big-btn ${ci.state === 'Voksen' ? 'on-green' : ''}"
+            onclick="ci.state='Voksen'; renderCiStep();" style="padding:20px 10px; font-size:20px;">
+            🧠<br><span style="font-size:14px; margin-top:6px; display:block;">Voksen</span>
+          </button>
+          <button class="big-btn ${ci.state === 'Barn' ? 'on-yellow' : ''}"
+            onclick="ci.state='Barn'; renderCiStep();" style="padding:20px 10px; font-size:20px;">
+            👶<br><span style="font-size:14px; margin-top:6px; display:block;">Barn</span>
+          </button>
+        </div>
+        <div class="card-sub" style="margin-bottom:8px;">Initiativ — vælg alt der passer</div>
+        <div class="chip-grid">
+          ${INITIATIVES.map(iv => `
+            <button class="chip ${ci.initiatives.includes(iv.label) ? 'on' : ''}" onclick="toggleInitiative('${iv.label}')">${iv.label}</button>`
+          ).join('')}
+        </div>
+        <button class="btn-primary" ${!ci.state ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
+        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
+      </div>
+    `;
+  } else if (ci.step === 5) {
+    const entryScore = calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes });
+    const summary = `[${ci.session}] Observerede: ${ci.obs.join(', ')}. Reaktion: ${ci.responses.join(', ')}. Udfald: ${ci.outcomes.join(', ')}. Initiativ: ${ci.initiatives.join(', ')||'–'}. Tilstand: ${ci.state}.`;
+    _stikordCtx = summary;
+    body = `
+      <div class="card">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:36px; font-weight:800; color:${scoreColor(entryScore)};">${entryScore > 0 ? '+' : ''}${entryScore}</div>
+          <div style="font-size:13px; color:var(--muted); margin-top:4px;">Score for dette check-in</div>
+        </div>
+        <div class="card-title">Refleksion</div>
+        <div class="card-sub">Valgfri — skriv hvad du vil dele med din GPT-coach</div>
+        <textarea id="ciNote" placeholder="Hvad vil du tilføje?..." rows="4"></textarea>
+        ${stikordHtml('ciNote')}
+        <button id="ciGptBtn" onclick="openGPT(document.getElementById('ciNote').value)" class="gpt-btn" style="margin-top:12px;width:100%;text-align:left;">
+          <span class="gpt-icon">🤖</span>
+          <div><div>Del med GPT</div><div class="gpt-sub">Kopierer tekst og åbner ChatGPT</div></div>
+        </button>
+        <button class="btn-primary" onclick="saveCiEntry()">💾 Gem check-in</button>
+        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
+      </div>
+    `;
+  }
+
+  document.getElementById('ciContent').innerHTML = `<div class="step-row">${dots}</div>${body}`;
+
+}
+
+function toggleDropdown(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+function toggleKlarItem(item) {
+  const items = _getKlarItems();
+  const i = items.indexOf(item);
+  if (i > -1) items.splice(i, 1); else items.push(item);
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
+}
+
+function selectKlarSub(parentLabel, subLabel) {
+  const items = _getKlarItems();
+  const subs = _getKlarSubs();
+  if (subs[parentLabel] === subLabel) {
+    // Deselect
+    delete subs[parentLabel];
+    const i = items.indexOf(parentLabel);
+    if (i > -1) items.splice(i, 1);
+  } else {
+    subs[parentLabel] = subLabel;
+    if (!items.includes(parentLabel)) items.push(parentLabel);
+  }
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
+}
+
+function toggleHomeInit(iv) {
+  const d = getData();
+  if (!d.dailies) d.dailies = {};
+  if (!d.dailies[todayKey()]) d.dailies[todayKey()] = {};
+  const inits = d.dailies[todayKey()].homeInitiatives || [];
+  const idx = inits.indexOf(iv);
+  if (idx > -1) inits.splice(idx, 1); else inits.push(iv);
+  d.dailies[todayKey()].homeInitiatives = inits;
+  setData(d);
+  renderHome();
+  document.getElementById('initDropdown').classList.add('open');
+}
+
+function toggleObs(o) {
+  const i = ci.obs.indexOf(o);
+  if (i > -1) ci.obs.splice(i, 1); else ci.obs.push(o);
+  renderCiStep();
+}
+
+function toggleResp(r) {
+  const i = ci.responses.indexOf(r);
+  if (i > -1) ci.responses.splice(i, 1); else ci.responses.push(r);
+  renderCiStep();
+}
+
+function toggleOutcome(o) {
+  const i = ci.outcomes.indexOf(o);
+  if (i > -1) ci.outcomes.splice(i, 1); else ci.outcomes.push(o);
+  renderCiStep();
+}
+
+function toggleInitiative(iv) {
+  const i = ci.initiatives.indexOf(iv);
+  if (i > -1) ci.initiatives.splice(i, 1); else ci.initiatives.push(iv);
+  renderCiStep();
+}
+
+function ciNext() { ci.step++; renderCiStep(); }
+function ciPrev() { ci.step--; renderCiStep(); }
+function toggleExchange(q) { const i = ci.exchange.indexOf(q); if (i > -1) ci.exchange.splice(i,1); else ci.exchange.push(q); }
+
+function saveCiEntry() {
+  const note = document.getElementById('ciNote')?.value || '';
+  saveEntry({ date: todayKey(), session: ci.session, observations: ci.obs, exchange: ci.exchange, responses: ci.responses, outcomes: ci.outcomes, initiatives: ci.initiatives, state: ci.state, note, ts: Date.now() });
+  const entryScore = ci.responses.reduce((s, r) => {
+    const found = RESPONSES.find(x => x.label === r);
+    return s + (found ? found.score : 0);
+  }, 0);
+  document.getElementById('ciContent').innerHTML = `
+    <div class="card" style="text-align:center; padding:36px 20px;">
+      <div style="font-size:64px; margin-bottom:14px;">✅</div>
+      <div class="card-title">Gemt!</div>
+      <div style="font-size:32px; font-weight:800; color:${scoreColor(entryScore)}; margin-bottom:8px;">${entryScore > 0 ? '+' : ''}${entryScore} point</div>
+      <p style="color:var(--muted); margin-bottom:20px;">${ci.session} check-in registreret.</p>
+      <button class="btn-primary" onclick="renderCheckin()">Nyt check-in</button>
+      <button class="btn-secondary" onclick="goTo('home')">Tilbage til hjem</button>
+    </div>
+  `;
+}
+
+// ---- DAILY ----
+let tempDaily = {};
+
+const KLAR_ITEMS = [
+  { label: 'Dagens fokuspunkt', type: 'text' },
+  'Er der løse ender?',
+  'Plan for dagen?',
+  'Ændringer for dagen?',
+  'Ny info der skal meldes ud?',
+  'Uselvisk, uopfordret initiativ',
+  { label: 'Tilbyde min assistance', info: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
+  { label: 'Tage lead på eget initiativ', info: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
+  { label: 'Initiativ - Omsorg', subs: [
+    'Du har i går nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!',
+    'Du var der for mig i går, jeg vil gerne være der for dig i dag?',
+    'Jeg vil gerne gengælde den omsorg du viste mig i går, hvad kan jeg gøre for dig i dag?',
+  ]},
+];
+
+const PLANNING_ITEMS = [
+  'Er der løse ender?',
+  'Plan for dagen?',
+  'Ændringer for dagen?',
+  'Ny info der skal meldes ud?',
+];
+
+function initDaily() {
+  const existing = getDailies()[todayKey()] || {};
+  tempDaily = { myStates: [...(existing.myStates || [])], herStates: [...(existing.herStates || [])], planning: [...(existing.planning || [])] };
+  renderDaily();
+}
+
+function renderDaily() {
+  document.getElementById('myDailyGrid').innerHTML = MY_DAILY.map(s => {
+    const isOn = tempDaily.myStates.includes(s.label);
+    const cls = s.score > 0 ? 'chip pos' : s.score < 0 ? 'chip neg' : 'chip neu';
+    const prefix = s.score > 0 ? '✚' : s.score < 0 ? '−' : '?';
+    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleMyState('${s.label}')">${prefix} ${s.label}</button>`;
+  }).join('');
+
+  document.getElementById('herDailyGrid').innerHTML = HER_DAILY.map(s => {
+    const isOn = tempDaily.herStates.includes(s.label);
+    const cls = s.score > 0 ? 'chip pos' : 'chip neg';
+    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleHerState('${s.label}')">${s.score > 0 ? '✚' : '−'} ${s.label}</button>`;
+  }).join('');
+
+  document.getElementById('planningChecks').innerHTML = PLANNING_ITEMS.map(item => {
+    const checked = tempDaily.planning.includes(item);
+    return `
+      <div class="check-item ${checked ? 'done' : ''}" onclick="togglePlanning('${item}')" style="margin-bottom:8px;">
+        <div class="check-circle">${checked ? '✓' : ''}</div>
+        <div class="check-label">${item}</div>
+      </div>`;
+  }).join('');
+}
+
+function togglePlanning(item) {
+  const i = tempDaily.planning.indexOf(item);
+  if (i > -1) tempDaily.planning.splice(i, 1); else tempDaily.planning.push(item);
+  renderDaily();
+}
+
+function toggleMyState(s) {
+  const i = tempDaily.myStates.indexOf(s);
+  if (i > -1) tempDaily.myStates.splice(i, 1); else tempDaily.myStates.push(s);
+  renderDaily();
+}
+
+function toggleHerState(s) {
+  const i = tempDaily.herStates.indexOf(s);
+  if (i > -1) tempDaily.herStates.splice(i, 1); else tempDaily.herStates.push(s);
+  renderDaily();
+}
+
+function updateDailyGptLink() {
+  const note = document.getElementById('dailyNote')?.value || '';
+  const msg = `Dagsoversigt: Min tilstand var "${tempDaily.myStates.join(', ') || '?'}", hendes var "${tempDaily.herStates.join(', ') || '?'}".` + (note ? '\n\n' + note : '');
+  const el = document.getElementById('dailyGptBtn');
+}
+
+function saveDailyAction() {
+  const d = getData();
+  if (!d.dailies) d.dailies = {};
+  d.dailies[todayKey()] = { ...tempDaily };
+  setData(d);
+  showToast('Dagsoversigt gemt ✓');
+}
+
+function updateDailyGptLink() {}
+
+// ---- HISTORY ----
+function renderHistory() {
+  const week = getWeekKey();
+  const weekImpulses = (getData().impulses || []).filter(i => i.week === week && i.kept && i.type === 'impuls');
+  const expiredTimers = (getData().impulses || []).filter(i => i.timerTarget && i.timerTarget <= Date.now());
+
+  let topHtml = '';
+  if (expiredTimers.length) {
+    topHtml += `<div class="card" style="border:2px solid rgba(245,158,11,0.4); background:rgba(245,158,11,0.06);">
+      <div class="card-title" style="color:var(--yellow);">⏰ Påmindelser udløbet</div>
+      ${expiredTimers.map(i => `<div style="padding:8px 0; font-size:14px; border-bottom:1px solid var(--border);">📌 "${i.text}"</div>`).join('')}
+    </div>`;
+  }
+  if (weekImpulses.length) {
+    topHtml += `<div class="card">
+      <div class="card-title">💭 Ugens impulser</div>
+      ${weekImpulses.map(i => `
+        <div style="padding:10px 0; border-bottom:1px solid var(--border); font-size:14px;">
+          <div style="font-weight:600;">"${i.text}"</div>
+          <div style="color:var(--muted); font-size:12px; margin-top:3px;">${new Date(i.ts).toLocaleDateString('da-DK',{weekday:'short',day:'numeric',month:'short'})}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  const entries = [...getEntries()].reverse();
+  if (entries.length === 0) {
+    document.getElementById('histContent').innerHTML = topHtml + '<p style="color:var(--muted); text-align:center; padding:40px;">Ingen check-ins endnu</p>';
+    return;
+  }
+  document.getElementById('histContent').innerHTML = topHtml + entries.slice(0, 40).map(e => {
+    const sc = calcEntryScore(e);
+    const date = new Date(e.ts).toLocaleDateString('da-DK', {day:'numeric', month:'short'});
+    const stateColor = e.state === 'Voksen' ? 'var(--green)' : 'var(--yellow)';
+    return `
+      <div class="hist-card">
+        <div class="hist-header">
+          <span class="hist-tag">${e.session}</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="session-score ${scoreStyle(sc)}">${sc > 0 ? '+' : ''}${sc}</span>
+            <span class="hist-date">${e.date === todayKey() ? 'I dag' : date}</span>
+          </div>
+        </div>
+        <div class="hist-chips">
+          ${(e.observations||[]).map(o => `<span class="hist-chip">${o}</span>`).join('')}
+        </div>
+        <div class="hist-meta">
+          <span>↳ ${(e.responses||[e.response]).filter(Boolean).join(', ')}</span>
+          <span>·</span>
+          <span style="color:${stateColor};">${e.state === 'Voksen' ? '🧠' : '👶'} ${e.state}</span>
+        </div>
+        ${(e.outcomes||[]).length ? `<div class="hist-meta" style="margin-top:4px;">
+          <span>Udfald: ${e.outcomes.join(', ')}</span>
+        </div>` : ''}
+        ${(e.initiatives||[]).length ? `<div class="hist-meta" style="margin-top:2px;">
+          <span>Initiativ: ${e.initiatives.join(', ')}</span>
+        </div>` : ''}
+        ${e.note ? `<div class="hist-note">"${e.note.length > 90 ? e.note.slice(0,90)+'…' : e.note}"</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- STIKORD ----
+const STIKORD = ['Refleksion', 'Check ind', 'Forslag', 'Beredskab', 'Dialog'];
+let _stikordCtx = '';
+
+function stikordHtml(noteElId) {
+  return `
+    <div style="margin-top:12px;">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Send til GPT med kommando</div>
+      <div class="stikord-row">
+        ${STIKORD.map(s => `<button class="stikord-btn" onclick="sendStikord('${s}','${noteElId}')">${s}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function sendStikord(keyword) {
+  openGPT(keyword);
+}
+
+// ---- GPT ----
+function renderGpt() {
+  _stikordCtx = '';
+  document.getElementById('gptStikord').innerHTML = stikordHtml('gptNote');
+  updateGptLink();
+}
+function updateGptLink() {
+  const note = document.getElementById('gptNote')?.value || '';
+  const el = document.getElementById('gptSendBtn');
+  if (el) { el.removeAttribute('href'); el.onclick = () => openGPT(note); }
+}
+
+// ---- PANIC ----
+function openPanic() {
+  document.getElementById('panicOverlay').classList.add('show');
+  document.getElementById('pFact').style.display = 'block';
+  document.getElementById('pBreath').style.display = 'none';
+  document.getElementById('pCheck').style.display = 'none';
+  stopBreath();
+}
+function closePanic() {
+  document.getElementById('panicOverlay').classList.remove('show');
+  stopBreath();
+  startReminders();
+}
+function panicNext(type) {
+  const d = getData();
+  if (!d.panic) d.panic = [];
+  d.panic.push({ date: todayKey(), type, ts: Date.now() });
+  setData(d);
+  document.getElementById('pFact').style.display = 'none';
+  document.getElementById('pBreath').style.display = 'block';
+  startBreath();
+}
+
+// ---- BREATHING ----
+let bPhase = 0, bRounds = 0, bTimer = null;
+const PHASES = [
+  { label:'Indånd', emoji:'😮‍💨', dur:4, big:true  },
+  { label:'Hold',   emoji:'😶',   dur:4, big:true  },
+  { label:'Udånd',  emoji:'😮',   dur:4, big:false },
+  { label:'Hold',   emoji:'😶',   dur:4, big:false },
+];
+
+function startBreath() {
+  bPhase = 0; bRounds = 0;
+  document.getElementById('bDone').style.display = 'none';
+  tickBreath();
+}
+function tickBreath() {
+  if (bRounds >= 4) {
+    document.getElementById('bLabel').textContent = 'Godt klaret!';
+    document.getElementById('bNum').textContent = '✓';
+    document.getElementById('bRing').classList.remove('big');
+    document.getElementById('bDone').style.display = 'block';
+    return;
+  }
+  const p = PHASES[bPhase];
+  document.getElementById('bLabel').textContent = p.label;
+  document.getElementById('bRing').textContent = p.emoji;
+  document.getElementById('bRing').classList.toggle('big', p.big);
+  let count = p.dur;
+  document.getElementById('bNum').textContent = count;
+  clearInterval(bTimer);
+  bTimer = setInterval(() => {
+    count--;
+    document.getElementById('bNum').textContent = count;
+    if (count <= 0) {
+      clearInterval(bTimer);
+      bPhase++;
+      if (bPhase >= PHASES.length) { bPhase = 0; bRounds++; }
+      tickBreath();
+    }
+  }, 1000);
+}
+function stopBreath() { clearInterval(bTimer); }
+
+let checkState = { sket: null, monster: null, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null };
+
+function showChecklist() {
+  document.getElementById('pBreath').style.display = 'none';
+  document.getElementById('pCheck').style.display = 'block';
+  checkState = { sket: null, monster: null, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null };
+  renderChecklist();
+}
+
+function renderChecklist() {
+  const s = checkState;
+  const bJa  = fn => `<button onclick="${fn}" style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--green);background:rgba(16,185,129,0.1);color:var(--green);font-weight:700;font-size:15px;cursor:pointer;">Ja</button>`;
+  const bNej = fn => `<button onclick="${fn}" style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--red);background:rgba(239,68,68,0.1);color:var(--red);font-weight:700;font-size:15px;cursor:pointer;">Nej</button>`;
+  const q = (text, answer, btns) => `
+    <div class="check-item" style="flex-direction:column;align-items:flex-start;gap:10px;background:${answer !== null ? 'rgba(16,185,129,0.08)' : 'var(--card)'};">
+      <div class="check-label" style="font-weight:600;">${text}</div>
+      ${answer !== null
+        ? `<span style="color:var(--green);font-weight:700;">✓ ${answer === 'ja' ? 'Ja' : 'Nej'}</span>`
+        : `<div style="display:flex;gap:10px;width:100%;">${btns}</div>`}
+    </div>`;
+  const stop = (icon, title, sub, rgb) => `
+    <div style="padding:16px;border-radius:14px;background:rgba(${rgb},0.1);border:2px solid rgba(${rgb},0.3);margin-bottom:4px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">${icon} ${title}</div>
+      ${sub ? `<div style="color:var(--muted);font-size:14px;">${sub}</div>` : ''}
+    </div>`;
+
+  let html = '';
+  let stopped = false;
+
+  // Q1: Er det lige sket?
+  html += q('Er det lige sket?', s.sket, bJa("setSket('ja')") + bNej("setSket('nej')"));
+  if (s.sket === 'nej') { html += stop('⏸', 'Tag en pause', 'Kom tilbage til det når det er aktuelt', '245,158,11'); stopped = true; }
+
+  if (!stopped && s.sket === 'ja') {
+    // Q2: Gammelt mønster?
+    html += q('Er mine følelser nu på vej i et gammelt mønster?', s.monster, bJa("setMonster('ja')") + bNej("setMonster('nej')"));
+    if (s.monster === 'ja') { html += stop('⏸', 'Genkend mønsteret', 'Du behøver ikke handle på det nu', '245,158,11'); stopped = true; }
+
+    if (!stopped && s.monster === 'nej') {
+      // Q3: Er hun vred?
+      html += q('Er hun vred/oprevet?', s.vred, bJa("setVred('ja')") + bNej("setVred('nej')"));
+
+      if (s.vred !== null) {
+        // Q4: Kan du møde hende i følelsen?
+        html += q('Kan du møde hende i følelsen?', s.folelse, bJa("setFolelse('ja')") + bNej("setFolelse('nej')"));
+        if (s.folelse === 'nej') { html += stop('💙', 'Mød hende i følelsen først', 'Inden du siger noget andet', '59,130,246'); stopped = true; }
+
+        if (!stopped && s.folelse === 'ja') {
+          // Q5: Kan du tilsidesætte dine forklaringer?
+          html += q('Kan du tilsidesætte dine forklaringer?', s.forklaring, bJa("setForklaring('ja')") + bNej("setForklaring('nej')"));
+          if (s.forklaring === 'nej') { html += stop('⏸', 'Ingen forklaring er nødvendig lige nu', '', '245,158,11'); stopped = true; }
+
+          if (!stopped && s.forklaring === 'ja') {
+            // Q6: Kræver rationalitet?
+            html += q('Kræver det du vil sige at hun er rationel?', s.rationel, bJa("setRationel('ja')") + bNej("setRationel('nej')"));
+            if (s.rationel === 'ja') { html += stop('⏸', 'Vent — hun er ikke klar til at være rationel endnu', '', '245,158,11'); stopped = true; }
+
+            if (!stopped && s.rationel === 'nej') {
+              // Q7: Fare for eskalering?
+              html += q('Er der fare for du siger noget der får det til at eskalere?', s.eskalere, bJa("setEskalere('ja')") + bNej("setEskalere('nej')"));
+              if (s.eskalere === 'ja') { html += stop('⏸', 'Afvent situationen', '', '245,158,11'); stopped = true; }
+
+              if (!stopped && s.eskalere === 'nej') {
+                // Q8: Kan du sige det kort og klart?
+                html += q('Kan du sige det kort og klart?', s.kort, bJa("setKort('ja')") + bNej("setKort('nej')"));
+                if (s.kort === 'nej') { html += stop('💙', 'Formulér det kortere og klarere', 'Prøv igen når du er klar', '59,130,246'); }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  document.getElementById('checkItems').innerHTML = html;
+  updateCheckDone();
+}
+
+function setSket(v)      { checkState = { ...checkState, sket: v, monster: null, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setMonster(v)   { checkState = { ...checkState, monster: v, vred: null, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setVred(v)      { checkState = { ...checkState, vred: v, folelse: null, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setFolelse(v)   { checkState = { ...checkState, folelse: v, forklaring: null, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setForklaring(v){ checkState = { ...checkState, forklaring: v, rationel: null, eskalere: null, kort: null }; renderChecklist(); }
+function setRationel(v)  { checkState = { ...checkState, rationel: v, eskalere: null, kort: null }; renderChecklist(); }
+function setEskalere(v)  { checkState = { ...checkState, eskalere: v, kort: null }; renderChecklist(); }
+function setKort(v)      { checkState = { ...checkState, kort: v }; renderChecklist(); }
+
+function updateCheckDone() {
+  const s = checkState;
+  const done = s.sket === 'nej' || s.monster === 'ja' || s.folelse === 'nej' || s.forklaring === 'nej' || s.rationel === 'ja' || s.eskalere === 'ja' || s.kort !== null;
+  document.getElementById('checkDoneBtn').style.display = done ? 'block' : 'none';
+}
+
+// ---- REMINDERS ----
+let remTimer = null, remIndex = 0;
+function startReminders() {
+  stopReminders();
+  remIndex = 0;
+  remTimer = setInterval(() => {
+    showReminder(REMINDERS[remIndex % REMINDERS.length]);
+    remIndex++;
+  }, 5 * 60 * 1000);
+}
+function stopReminders() { clearInterval(remTimer); remTimer = null; }
+function showReminder(q) {
+  document.getElementById('reminderQ').textContent = q;
+  document.getElementById('reminderWrap').classList.add('show');
+}
+function closeReminder(ok) {
+  document.getElementById('reminderWrap').classList.remove('show');
+  if (!ok) showReminder(REMINDERS[remIndex % REMINDERS.length]);
+}
+
+// ---- TOAST ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---- IMPULS ----
+let imp = { text: '', stopped: null, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+
+let _omsorg = null;
+function _getOmsorg() {
+  if (_omsorg === null) _omsorg = getData().omsorg || [];
+  return _omsorg;
+}
+function saveOmsorg() { const d = getData(); d.omsorg = _omsorg; setData(d); }
+
+function getOmsorgCounts() {
+  const o = _getOmsorg();
+  const today = todayKey(), week = getWeekKey();
+  const count = (type, period) => o.filter(x => x.type === type && x[period === 'd' ? 'date' : 'week'] === (period === 'd' ? today : week)).length;
+  return {
+    modtog: { d: count('modtog','d'), w: count('modtog','w') },
+    gav:    { d: count('gav','d'),    w: count('gav','w') },
+  };
+}
+
+function addOmsorg(type) {
+  _getOmsorg().push({ date: todayKey(), week: getWeekKey(), type, ts: Date.now() });
+  saveOmsorg();
+  renderGribBtns();
+  renderHome();
+}
+
+function renderGribBtns() {
+  const oc = getOmsorgCounts();
+  const sep = `<span style="color:rgba(255,255,255,0.4);font-size:14px;font-weight:400;"> – </span>`;
+  const counter = (type, label, icon, color, rgb) => `
+    <div style="padding:14px 8px;border-radius:14px;border:2px solid rgba(${rgb},0.4);background:rgba(${rgb},0.12);text-align:center;">
+      <div style="font-size:20px;margin-bottom:4px;">${icon}</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#fff;">${label}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+        <button onclick="removeOmsorg('${type}')" style="width:36px;height:36px;border-radius:50%;border:2px solid rgba(${rgb},0.5);background:rgba(${rgb},0.15);color:${color};font-size:22px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit;">−</button>
+        <div style="min-width:32px;text-align:center;">
+          <div style="font-size:28px;font-weight:900;color:${color};line-height:1;">${oc[type].d}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.4);">${sep}${oc[type].w} uge</div>
+        </div>
+        <button onclick="addOmsorg('${type}')" style="width:36px;height:36px;border-radius:50%;border:2px solid rgba(${rgb},0.5);background:rgba(${rgb},0.15);color:${color};font-size:22px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit;">+</button>
+      </div>
+    </div>`;
+  document.getElementById('omsorgCounters').innerHTML =
+    counter('modtog', 'Jeg modtog omsorg', '🤝', 'var(--primary)', '59,130,246') +
+    counter('gav',    'Jeg gav omsorg',    '💚', 'var(--green)',   '16,185,129');
+}
+
+function removeOmsorg(type) {
+  const arr = _getOmsorg();
+  const today = todayKey();
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i].type === type && arr[i].date === today) { arr.splice(i, 1); break; }
+  }
+  saveOmsorg();
+  renderGribBtns();
+  renderHome();
+}
+
+function openGrib()  {
+  document.getElementById('gribOverlay').classList.add('show');
+  renderGribBtns();
+}
+function closeGrib() { document.getElementById('gribOverlay').classList.remove('show'); }
+
+function openImpuls() {
+  imp = { text: '', stopped: null, followUps: [], followUpDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+  document.getElementById('impulsOverlay').classList.add('show');
+  renderImpuls();
+}
+
+function closeImpuls() {
+  document.getElementById('impulsOverlay').classList.remove('show');
+}
+
+function toggleFollowUp(item) {
+  const i = imp.followUps.indexOf(item);
+  if (i > -1) imp.followUps.splice(i, 1); else imp.followUps.push(item);
+}
+
+function renderImpuls() {
+  const el = document.getElementById('impulsContent');
+
+  if (imp.stopped === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Hvad handler impulsen om?</div>
+        <textarea id="impText" placeholder="Skriv kort..." rows="3" oninput="imp.text=this.value">${imp.text}</textarea>
+        <div class="card-title" style="margin-top:20px; font-size:16px;">Hvad skete der?</div>
+        <div class="big-btn-grid" style="margin-top:8px;">
+          <button class="big-btn on-green" onclick="recordStop(true); imp.stopped=true; renderImpuls();" style="padding:20px 10px;">
+            ✋<br><span style="font-size:13px; margin-top:6px; display:block;">Standsede op</span>
+          </button>
+          <button class="big-btn on-yellow" onclick="recordStop(false); imp.stopped=false; renderImpuls();" style="padding:20px 10px;">
+            ➡️<br><span style="font-size:13px; margin-top:6px; display:block;">Fik ikke standset op</span>
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const FOLLOW_UPS = [
+    'Jeg spurgte om jeg måtte afbryde',
+    'Jeg spurgte om hun havde lyst til at være omsorgsfuld',
+    'Jeg spurgte om hun havde lyst til at være blid og lyttende',
+    'Jeg spurgte om hun havde lyst til at give lidt sparring',
+  ];
+
+  if (imp.stopped === true && !imp.followUpDone) {
+    const bonusPoints = imp.followUps.length * 5;
+    el.innerHTML = `
+      <div class="card">
+        <div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:16px;">✋ Standsede op · +15 point</div>
+        <div class="card-title" style="margin-bottom:8px;">Hvad gjorde du derudover?</div>
+        <div class="card-sub" style="margin-bottom:12px;">Hvert valg giver +5 point</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+          ${FOLLOW_UPS.map(f => {
+            const on = imp.followUps.includes(f);
+            return `<button onclick="toggleFollowUp('${f.replace(/'/g,"\\'")}'); renderImpuls();"
+              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--green)' : 'var(--border)'};background:${on ? 'rgba(16,185,129,0.12)' : 'var(--card2)'};color:${on ? 'var(--green)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+              ${on ? '✓ ' : ''}${f}
+            </button>`;
+          }).join('')}
+        </div>
+        ${bonusPoints > 0 ? `<div style="text-align:center;color:var(--green);font-weight:700;font-size:14px;margin-bottom:12px;">Bonus: +${bonusPoints} point</div>` : ''}
+        <button class="btn-primary" onclick="imp.followUpDone=true; renderImpuls();">Videre →</button>
+        <button class="btn-secondary" onclick="imp.stopped=null; imp.followUps=[]; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.type === null) {
+    const bonusPoints = imp.followUps.length * 5;
+    const stoppedHtml = imp.stopped
+      ? `<div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:14px;">✋ Standsede op · +${15 + bonusPoints} point</div>`
+      : `<div style="background:rgba(245,158,11,0.1); border-radius:12px; padding:10px 14px; color:var(--yellow); font-weight:700; margin-bottom:14px;">➡️ Fik ikke standset op</div>`;
+    el.innerHTML = `
+      <div class="card">
+        ${stoppedHtml}
+        <div class="card-title">Hvad er impulsen?</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+          <button class="big-btn" onclick="imp.type='vigtigt'; renderImpuls();" style="text-align:left; padding:16px 18px;">⭐ Vigtigt</button>
+          <button class="big-btn" onclick="imp.type='akut'; renderImpuls();" style="text-align:left; padding:16px 18px;">🚨 Akut</button>
+          <button class="big-btn" onclick="imp.type='impuls'; renderImpuls();" style="text-align:left; padding:16px 18px;">💭 Blot en impuls</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.stopped=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.type === 'impuls') {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Blot en impuls</div>
+        <div class="card-sub">"${imp.text || '...'}"</div>
+        <button class="btn-primary" style="background:var(--green);" onclick="saveImpuls(true)">💾 Gem til "Ugens impulser"</button>
+        <button class="btn-secondary" onclick="saveImpuls(false)">🗑 Kassér</button>
+        <button class="btn-secondary" onclick="imp.type=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  // Vigtigt / Akut — tre spørgsmål
+  if (imp.forMig === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Vigtig for mig?</div>
+        <div class="yesno-row">
+          <button class="yn-btn yes" onclick="imp.forMig=true; renderImpuls();">Ja</button>
+          <button class="yn-btn no"  onclick="imp.forMig=false; renderImpuls();">Nej</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.type=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.forPartner === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Vigtig for min partner?</div>
+        <div class="yesno-row">
+          <button class="yn-btn yes" onclick="imp.forPartner=true; renderImpuls();">Ja</button>
+          <button class="yn-btn no"  onclick="imp.forPartner=false; renderImpuls();">Nej</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.forMig=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.partnerNu === null) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Har min partner brug for infoen lige nu?</div>
+        <div class="yesno-row">
+          <button class="yn-btn yes" onclick="imp.partnerNu=true; renderImpuls();">Ja</button>
+          <button class="yn-btn no"  onclick="imp.partnerNu=false; renderImpuls();">Nej</button>
+        </div>
+        <button class="btn-secondary" onclick="imp.forPartner=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (!imp.partnerNu) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Sæt en påmindelse</div>
+        <div class="card-sub">Hvornår vil du vende tilbage til det?</div>
+        <div class="timer-unit-row">
+          <button class="timer-unit-btn ${imp.timerUnit==='timer' ? 'on' : ''}" onclick="imp.timerUnit='timer'; imp.timerVal=Math.min(imp.timerVal,24); renderImpuls();">Timer</button>
+          <button class="timer-unit-btn ${imp.timerUnit==='dage' ? 'on' : ''}" onclick="imp.timerUnit='dage'; imp.timerVal=Math.min(imp.timerVal,30); renderImpuls();">Dage</button>
+        </div>
+        <div class="timer-row">
+          <button class="timer-btn" onclick="imp.timerVal=Math.max(1,imp.timerVal-1); renderImpuls();">−</button>
+          <div class="timer-val">${imp.timerVal}</div>
+          <button class="timer-btn" onclick="imp.timerVal=Math.min(imp.timerUnit==='timer'?24:30, imp.timerVal+1); renderImpuls();">+</button>
+        </div>
+        <div style="text-align:center; color:var(--muted); font-size:14px; margin-bottom:8px;">Om ${imp.timerVal} ${imp.timerUnit}</div>
+        <button class="btn-primary" onclick="saveImpuls(true)">💾 Gem med påmindelse</button>
+        <button class="btn-secondary" onclick="imp.partnerNu=null; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  // partnerNu = true — gem direkte
+  el.innerHTML = `
+    <div class="card" style="text-align:center; padding:30px 20px;">
+      <div style="font-size:48px; margin-bottom:12px;">📌</div>
+      <div class="card-title">Klar til at handle</div>
+      <div class="card-sub">"${imp.text || '...'}"</div>
+      <button class="btn-primary" onclick="saveImpuls(true)">💾 Gem</button>
+      <button class="btn-secondary" onclick="imp.partnerNu=null; renderImpuls();">← Tilbage</button>
+    </div>`;
+}
+
+function saveImpuls(keep) {
+  const d = getData();
+  if (!d.impulses) d.impulses = [];
+  const timerMs = imp.timerUnit === 'timer'
+    ? imp.timerVal * 60 * 60 * 1000
+    : imp.timerVal * 24 * 60 * 60 * 1000;
+  const entry = {
+    text: imp.text,
+    stopped: imp.stopped,
+    type: imp.type,
+    forMig: imp.forMig,
+    forPartner: imp.forPartner,
+    partnerNu: imp.partnerNu,
+    timerTarget: (!imp.partnerNu && imp.type !== 'impuls') ? Date.now() + timerMs : null,
+    timerLabel: `${imp.timerVal} ${imp.timerUnit}`,
+    kept: keep,
+    date: todayKey(),
+    week: getWeekKey(),
+    ts: Date.now()
+  };
+  if (keep) d.impulses.push(entry);
+
+  // +15 point for stopping + +5 per follow-up
+  if (imp.stopped) {
+    if (!d.impulsScore) d.impulsScore = {};
+    const bonus = imp.followUps.length * 5;
+    d.impulsScore[todayKey()] = (d.impulsScore[todayKey()] || 0) + 15 + bonus;
+  }
+  setData(d);
+  closeImpuls();
+  renderHome();
+  showToast(keep ? '💡 Gemt!' : '🗑 Kasseret');
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay() + 1);
+  return start.toISOString().slice(0,10);
+}
+
+function getImpulsScore() {
+  const d = getData();
+  if (!d.impulsScore) return 0;
+  return (d.impulsScore[todayKey()] || 0);
+}
+
+let _stops = null;
+function _getStops() {
+  if (_stops === null) _stops = getData().stops || [];
+  return _stops;
+}
+
+let _klarItems = null;
+let _klarSubs = null;
+function _getKlarItems() {
+  if (_klarItems === null) _klarItems = (getData().klar || {})[todayKey()] || [];
+  return _klarItems;
+}
+function _getKlarSubs() {
+  if (_klarSubs === null) _klarSubs = (getData().klarSubs || {})[todayKey()] || {};
+  return _klarSubs;
+}
+function _saveKlarItems() {
+  const d = getData();
+  if (!d.klar) d.klar = {};
+  d.klar[todayKey()] = _klarItems;
+  if (!d.klarSubs) d.klarSubs = {};
+  d.klarSubs[todayKey()] = _klarSubs;
+  setData(d);
+}
+
+let _klarFokus = null;
+function _getKlarFokus() {
+  if (_klarFokus === null) _klarFokus = (getData().klarFokus || {})[todayKey()] || '';
+  return _klarFokus;
+}
+function saveKlarFokus(text) {
+  _klarFokus = text;
+  const d = getData();
+  if (!d.klarFokus) d.klarFokus = {};
+  d.klarFokus[todayKey()] = text;
+  setData(d);
+}
+function onFokusInput(val) {
+  saveKlarFokus(val);
+  const el = document.getElementById('klarFokusDisplay');
+  if (el) { el.textContent = val ? '🎯 ' + val : ''; el.style.display = val ? 'block' : 'none'; }
+}
+
+let _adfaerd = null;
+function _getAdfaerd() {
+  if (_adfaerd === null) _adfaerd = getData().adfaerd || [];
+  return _adfaerd;
+}
+
+const ADFAERD_TYPES = [
+  { type: 'naervaerende', score: 20,  label: '🟢 Nærværende og spurgte ind',                                                   scoreLabel: '+20 point',     rgb: '16,185,129' },
+  { type: 'lyttende',     score: -10, label: '🟡 Lyttende men passiv',                                                          scoreLabel: '−10 point',    rgb: '245,158,11' },
+  { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',                                                        scoreLabel: '−30 point',    rgb: '239,68,68' },
+  { type: 'voksen',       score: 0,   label: '🔵 Voksen reaktion',                                                              scoreLabel: 'tæller antal', rgb: '59,130,246' },
+  { type: 'indreBarn',    score: 0,   label: '⚪ Indre barn reaktion',                                                           scoreLabel: 'tæller antal', rgb: '100,116,139' },
+  { type: 'standsede',    score: 20,  label: '🛑 Standsede hende i automatadfærd og italesatte at det ikke var hendes opgave',  scoreLabel: '+20 point',    rgb: '139,92,246' },
+];
+
+let _adfaerdSession = {};
+
+function openAdfaerd() {
+  _adfaerdSession = {};
+  document.getElementById('adfaerdOverlay').classList.add('show');
+  renderAdfaerdBtns();
+}
+function closeAdfaerd() { document.getElementById('adfaerdOverlay').classList.remove('show'); }
+
+function renderAdfaerdBtns() {
+  document.getElementById('adfaerdBtns').innerHTML = ADFAERD_TYPES.map(t => {
+    const on = !!_adfaerdSession[t.type];
+    const bg = on ? `rgba(${t.rgb},0.85)` : `rgba(${t.rgb},0.1)`;
+    const col = on ? '#fff' : `rgba(${t.rgb},1)`;
+    return `<button onclick="toggleAdfaerd('${t.type}',${t.score})" style="padding:14px 16px;border-radius:14px;border:2px solid rgba(${t.rgb},1);background:${bg};color:${col};font-weight:700;font-size:15px;cursor:pointer;text-align:left;width:100%;font-family:inherit;transition:background 0.15s,color 0.15s;">
+      ${t.label} &nbsp;<span style="font-weight:400;font-size:13px;">${t.scoreLabel}</span>
+    </button>`;
+  }).join('');
+}
+
+function toggleAdfaerd(type, score) {
+  if (_adfaerdSession[type]) {
+    const arr = _getAdfaerd();
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (arr[i].type === type && arr[i].date === todayKey()) { arr.splice(i, 1); break; }
+    }
+    _adfaerdSession[type] = false;
+  } else {
+    _getAdfaerd().push({ date: todayKey(), week: getWeekKey(), type, score, ts: Date.now() });
+    _adfaerdSession[type] = true;
+  }
+  const d = getData(); d.adfaerd = _adfaerd; setData(d);
+  renderAdfaerdBtns();
+  renderHome();
+}
+
+function getAdfaerdCounts() {
+  const a = _getAdfaerd();
+  const today = todayKey(), week = getWeekKey();
+  const count = (type, period) => a.filter(x => x.type === type && x[period === 'd' ? 'date' : 'week'] === (period === 'd' ? today : week)).length;
+  return {
+    naervaerende: { d: count('naervaerende','d'), w: count('naervaerende','w') },
+    lyttende:     { d: count('lyttende','d'),     w: count('lyttende','w') },
+    lukket:       { d: count('lukket','d'),        w: count('lukket','w') },
+    voksen:       { d: count('voksen','d'),        w: count('voksen','w') },
+    indreBarn:    { d: count('indreBarn','d'),     w: count('indreBarn','w') },
+    standsede:    { d: count('standsede','d'),     w: count('standsede','w') },
+  };
+}
+
+function getAdfaerdScore() {
+  const today = todayKey();
+  return _getAdfaerd().filter(x => x.date === today).reduce((sum, x) => sum + (x.score || 0), 0);
+}
+
+function recordStop(didStop) {
+  _getStops().push({ date: todayKey(), week: getWeekKey(), stopped: didStop, ts: Date.now() });
+  const d = getData();
+  d.stops = _stops;
+  setData(d);
+  renderHome();
+}
+
+function getStopCounts() {
+  const stops = _getStops();
+  const today = todayKey();
+  const week  = getWeekKey();
+  return {
+    todayStopped:    stops.filter(s => s.date === today &&  s.stopped).length,
+    todayNotStopped: stops.filter(s => s.date === today && !s.stopped).length,
+    weekStopped:     stops.filter(s => s.week === week  &&  s.stopped).length,
+    weekNotStopped:  stops.filter(s => s.week === week  && !s.stopped).length,
+  };
+}
+
+renderHome();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
