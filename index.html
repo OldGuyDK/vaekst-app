@@ -2468,8 +2468,8 @@ if ('serviceWorker' in navigator) {
   requestNotifPermission();
 }
 
-// Tjek om der er en ny version på serveren (kører 3 sek. efter load)
-setTimeout(async () => {
+// Tjek om der er en ny version — ved load og hver gang appen kommer i forgrunden
+async function checkAppVersion() {
   try {
     const res = await fetch('https://raw.githubusercontent.com/OldGuyDK/vaekst-app/main/version.json?_=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
@@ -2478,7 +2478,9 @@ setTimeout(async () => {
       if (b) b.style.display = 'flex';
     }
   } catch(e) {}
-}, 3000);
+}
+setTimeout(checkAppVersion, 2000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkAppVersion(); });
 </script>
 </body>
 </html>
