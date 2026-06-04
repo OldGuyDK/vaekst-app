@@ -950,6 +950,18 @@ function renderHome() {
         <span style="font-size:13px;font-weight:600;">🛑 Standsede automatadfærd</span>
         <span style="font-size:16px;font-weight:800;color:#8b5cf6;">${ac.standsede.d}${sep}${ac.standsede.w}</span>
       </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🚫 Afbrød samtale</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.afbroed.d}${sep}${ac.afbroed.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">😤 Vrissede</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.vrissede.d}${sep}${ac.vrissede.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">⚡ Gik for hurtigt frem</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.forHurtigt.d}${sep}${ac.forHurtigt.w}</span>
+      </div>
     </div>
   `;
 
@@ -2225,6 +2237,9 @@ const ADFAERD_TYPES = [
   { type: 'voksen',       score: 0,   label: '🔵 Voksen reaktion',                                                              scoreLabel: 'tæller antal', rgb: '59,130,246' },
   { type: 'indreBarn',    score: 0,   label: '⚪ Indre barn reaktion',                                                           scoreLabel: 'tæller antal', rgb: '100,116,139' },
   { type: 'standsede',    score: 20,  label: '🛑 Standsede hende i automatadfærd og italesatte at det ikke var hendes opgave',  scoreLabel: '+20 point',    rgb: '139,92,246' },
+  { type: 'afbroed',      score: -20, label: '🚫 Afbrød samtale',                                                                   scoreLabel: '−20 point',    rgb: '239,68,68' },
+  { type: 'vrissede',     score: -20, label: '😤 Vrissede',                                                                         scoreLabel: '−20 point',    rgb: '239,68,68' },
+  { type: 'forHurtigt',   score: -20, label: '⚡ Gik for hurtigt frem uden at informere',                                           scoreLabel: '−20 point',    rgb: '239,68,68' },
 ];
 
 let _adfaerdSession = {};
@@ -2274,6 +2289,9 @@ function getAdfaerdCounts() {
     voksen:       { d: count('voksen','d'),        w: count('voksen','w') },
     indreBarn:    { d: count('indreBarn','d'),     w: count('indreBarn','w') },
     standsede:    { d: count('standsede','d'),     w: count('standsede','w') },
+    afbroed:      { d: count('afbroed','d'),       w: count('afbroed','w') },
+    vrissede:     { d: count('vrissede','d'),      w: count('vrissede','w') },
+    forHurtigt:   { d: count('forHurtigt','d'),   w: count('forHurtigt','w') },
   };
 }
 
