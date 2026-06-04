@@ -605,6 +605,7 @@
 </div>
 
 <script>
+const APP_VERSION = 'v3';
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
 function openGPT(text) {
   if (text) {
@@ -2402,25 +2403,23 @@ async function requestNotifPermission() {
 renderHome();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').then(reg => {
-    requestNotifPermission();
-
-    // Vis banner når ny SW er klar
-    function showUpdateBanner() {
-      const b = document.getElementById('updateBanner');
-      if (b) b.style.display = 'flex';
-    }
-    if (reg.waiting) { showUpdateBanner(); }
-    reg.addEventListener('updatefound', () => {
-      const nw = reg.installing;
-      nw.addEventListener('statechange', () => {
-        if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner();
-      });
-    });
-  });
+  navigator.serviceWorker.register('./sw.js').then(() => requestNotifPermission());
 } else {
   requestNotifPermission();
 }
+
+// Tjek om der er en ny version på serveren (kører 3 sek. efter load)
+setTimeout(async () => {
+  try {
+    const res = await fetch(location.href.split('?')[0] + '?_=' + Date.now(), { cache: 'no-store' });
+    const text = await res.text();
+    const m = text.match(/APP_VERSION\s*=\s*'([^']+)'/);
+    if (m && m[1] !== APP_VERSION) {
+      const b = document.getElementById('updateBanner');
+      if (b) b.style.display = 'flex';
+    }
+  } catch(e) {}
+}, 3000);
 </script>
 </body>
 </html>
