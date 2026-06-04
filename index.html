@@ -2411,10 +2411,10 @@ if ('serviceWorker' in navigator) {
 // Tjek om der er en ny version på serveren (kører 3 sek. efter load)
 setTimeout(async () => {
   try {
-    const res = await fetch(location.href.split('?')[0] + '?_=' + Date.now(), { cache: 'no-store' });
-    const text = await res.text();
-    const m = text.match(/APP_VERSION\s*=\s*'([^']+)'/);
-    if (m && m[1] !== APP_VERSION) {
+    const base = location.href.split('?')[0].replace(/\/?$/, '/');
+    const res = await fetch(base + 'version.json?_=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    if (data.v && data.v !== APP_VERSION) {
       const b = document.getElementById('updateBanner');
       if (b) b.style.display = 'flex';
     }
