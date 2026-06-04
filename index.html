@@ -1094,19 +1094,22 @@ function addReminder() {
   const date = document.getElementById('newRemDate').value || todayKey();
   const time = document.getElementById('newRemTime').value;
   if (!text) return;
-  _getAllRems().push({ id: Date.now(), text, time, date, done: false, meldtTilbage: false });
+  const rem = { id: Date.now(), text, time, date, done: false, meldtTilbage: false };
+  _getAllRems().push(rem);
   saveReminders();
+  scheduleReminderNotifs(rem);
   renderHome();
 }
 
 function deleteReminder(id) {
+  cancelReminderNotifs(id);
   _allRems = _getAllRems().filter(r => r.id !== id);
   saveReminders();
   renderHome();
 }
 
 function toggleReminderDone(id) {
-  _getAllRems().forEach(r => { if (r.id === id) r.done = !r.done; });
+  _getAllRems().forEach(r => { if (r.id === id) { r.done = !r.done; if (r.done) cancelReminderNotifs(id); else scheduleReminderNotifs(r); } });
   saveReminders();
   renderHome();
 }
@@ -1175,12 +1178,14 @@ function rescheduleReminder(id) {
   _getAllRems().forEach(r => { if (r.id === id) { r.date = date; r.time = time; r.done = false; r.meldtTilbage = false; } });
   _notifiedRems.delete(id); _alarmCooldown.delete(id);
   saveReminders();
+  _getAllRems().forEach(r => { if (r.id === id) scheduleReminderNotifs(r); });
   const still = getExpiredRems();
   if (still.length) renderExpiredModal(still);
   else { document.getElementById('expiredModal').classList.remove('show'); renderHome(); }
 }
 
 function deleteReminderModal(id) {
+  cancelReminderNotifs(id);
   _allRems = _getAllRems().filter(r => r.id !== id);
   saveReminders();
   const still = getExpiredRems();
@@ -2320,10 +2325,67 @@ function getStopCounts() {
   };
 }
 
+// ---- NOTIFIKATIONER ----
+const _notifTimers = new Map();
+
+function sendNotification(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'NOTIFY', title, body, tag });
+  } else {
+    new Notification(title, { body, tag, requireInteraction: true });
+  }
+}
+
+function cancelReminderNotifs(id) {
+  const timers = _notifTimers.get(id);
+  if (timers) { timers.forEach(clearTimeout); _notifTimers.delete(id); }
+}
+
+function scheduleReminderNotifs(rem) {
+  cancelReminderNotifs(rem.id);
+  if (rem.done || rem.meldtTilbage || !rem.time || !rem.date) return;
+  const now = Date.now();
+  const deadline = new Date(rem.date + 'T' + rem.time).getTime();
+  if (isNaN(deadline)) return;
+  const timers = [];
+  const beforeMs = deadline - 60 * 60 * 1000 - now;
+  if (beforeMs > 0) {
+    timers.push(setTimeout(() => {
+      sendNotification('⏰ Reminder om 1 time', rem.text, 'rem-before-' + rem.id);
+    }, beforeMs));
+  }
+  const atMs = deadline - now;
+  if (atMs > 0) {
+    timers.push(setTimeout(() => {
+      sendNotification('🔔 Tidsfrist udløbet!', rem.text, 'rem-at-' + rem.id);
+    }, atMs));
+  }
+  if (timers.length) _notifTimers.set(rem.id, timers);
+}
+
+function scheduleAllReminders() {
+  _getAllRems().forEach(scheduleReminderNotifs);
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') scheduleAllReminders();
+  } else if (Notification.permission === 'granted') {
+    scheduleAllReminders();
+  }
+}
+
 renderHome();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
+  navigator.serviceWorker.register('./sw.js').then(() => {
+    requestNotifPermission();
+  });
+} else {
+  requestNotifPermission();
 }
 </script>
 </body>
