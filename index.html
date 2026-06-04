@@ -790,7 +790,7 @@ function renderHome() {
   const h = now.getHours();
   const greet = h < 10 ? 'God morgen' : h < 14 ? 'God formiddag' : h < 18 ? 'God eftermiddag' : h < 21 ? 'God aften' : 'God nat';
   document.getElementById('homeGreet').textContent = greet + ' 👋';
-  document.getElementById('homeDate').textContent = now.toLocaleDateString('da-DK', {weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('homeDate').textContent = now.toLocaleDateString('da-DK', {weekday:'long',day:'numeric',month:'long'}) + '  ·  v3 ✓';
 
   const total = calcTodayTotal();
   const color = scoreColor(total);

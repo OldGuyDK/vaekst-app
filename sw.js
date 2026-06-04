@@ -1,4 +1,4 @@
-const CACHE = 'vaekst-v2';
+const CACHE = 'vaekst-v3';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
