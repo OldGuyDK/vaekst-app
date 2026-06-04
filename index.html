@@ -605,7 +605,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v3';
+const APP_VERSION = 'v4';
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
 function openGPT(text) {
   if (text) {
@@ -791,7 +791,7 @@ function renderHome() {
   const h = now.getHours();
   const greet = h < 10 ? 'God morgen' : h < 14 ? 'God formiddag' : h < 18 ? 'God eftermiddag' : h < 21 ? 'God aften' : 'God nat';
   document.getElementById('homeGreet').textContent = greet + ' 👋';
-  document.getElementById('homeDate').textContent = now.toLocaleDateString('da-DK', {weekday:'long',day:'numeric',month:'long'}) + '  ·  v3 ✓';
+  document.getElementById('homeDate').textContent = now.toLocaleDateString('da-DK', {weekday:'long',day:'numeric',month:'long'}) + '  ·  v4 ✓';
 
   const total = calcTodayTotal();
   const color = scoreColor(total);
