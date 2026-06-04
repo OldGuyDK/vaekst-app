@@ -605,7 +605,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v5';
+const APP_VERSION = 'v6';
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
 function openGPT(text) {
   if (text) {
@@ -1978,7 +1978,7 @@ function openGrib()  {
 function closeGrib() { document.getElementById('gribOverlay').classList.remove('show'); }
 
 function openImpuls() {
-  imp = { text: '', stopped: null, followUps: [], followUpDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+  imp = { text: '', stopped: null, followUps: [], followUpDone: false, feelings: [], feelingsDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
   document.getElementById('impulsOverlay').classList.add('show');
   renderImpuls();
 }
@@ -1990,6 +1990,48 @@ function closeImpuls() {
 function toggleFollowUp(item) {
   const i = imp.followUps.indexOf(item);
   if (i > -1) imp.followUps.splice(i, 1); else imp.followUps.push(item);
+}
+
+const FEELINGS = [
+  'Følte mig svag',
+  'Mindreværd / usikker',
+  'Uoverskueligt — følelsen af at være bagud',
+  'Ikke at forstå hvorfor / ikke helt at forstå mig selv',
+  'Utryg / utilstrækkelig',
+  'Kom til kort ("det er ikke muligt / jeg kan ikke vinde her")',
+  'Opgivende / irriteret',
+  '"Åh nej, nu igen!"',
+  'Katastrofetanker',
+  'Magtesløshed',
+  'Frygten for at den ikke kan reddes',
+  'Frygten for at miste',
+  'Følelsen af ikke at have styr på sig selv',
+  'Føle sig misforstået',
+  'Frustration / vrede',
+];
+
+function toggleFeeling(f) {
+  const i = imp.feelings.indexOf(f);
+  if (i > -1) imp.feelings.splice(i, 1); else imp.feelings.push(f);
+  renderImpuls();
+}
+
+function saveImpulsNotStopped() {
+  const d = getData();
+  if (!d.impulses) d.impulses = [];
+  d.impulses.push({
+    text: imp.text,
+    stopped: false,
+    feelings: imp.feelings,
+    date: todayKey(),
+    week: getWeekKey(),
+    ts: Date.now(),
+    kept: true,
+  });
+  setData(d);
+  closeImpuls();
+  renderHome();
+  showToast('💡 Gemt!');
 }
 
 function renderImpuls() {
@@ -2043,21 +2085,39 @@ function renderImpuls() {
     return;
   }
 
-  if (imp.type === null) {
-    const bonusPoints = imp.followUps.length * 5;
-    const stoppedHtml = imp.stopped
-      ? `<div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:14px;">✋ Standsede op · +${15 + bonusPoints} point</div>`
-      : `<div style="background:rgba(245,158,11,0.1); border-radius:12px; padding:10px 14px; color:var(--yellow); font-weight:700; margin-bottom:14px;">➡️ Fik ikke standset op</div>`;
+  // Fik ikke standset op → Følelse-liste
+  if (imp.stopped === false && !imp.feelingsDone) {
     el.innerHTML = `
       <div class="card">
-        ${stoppedHtml}
+        <div style="background:rgba(245,158,11,0.1); border-radius:12px; padding:10px 14px; color:var(--yellow); font-weight:700; margin-bottom:14px;">➡️ Fik ikke standset op</div>
+        <div class="card-title" style="margin-bottom:12px;">Følelse</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+          ${FEELINGS.map(f => {
+            const on = imp.feelings.includes(f);
+            return `<button onclick="toggleFeeling('${f.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
+              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--yellow)' : 'var(--border)'};background:${on ? 'rgba(245,158,11,0.12)' : 'var(--card2)'};color:${on ? 'var(--yellow)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
+              ${on ? '✓ ' : ''}${f}
+            </button>`;
+          }).join('')}
+        </div>
+        <button class="btn-primary" onclick="saveImpulsNotStopped()">💾 Gem</button>
+        <button class="btn-secondary" onclick="imp.stopped=null; imp.feelings=[]; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  if (imp.type === null) {
+    const bonusPoints = imp.followUps.length * 5;
+    el.innerHTML = `
+      <div class="card">
+        <div style="background:rgba(16,185,129,0.12); border-radius:12px; padding:10px 14px; color:var(--green); font-weight:700; margin-bottom:14px;">✋ Standsede op · +${15 + bonusPoints} point</div>
         <div class="card-title">Hvad er impulsen?</div>
         <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
           <button class="big-btn" onclick="imp.type='vigtigt'; renderImpuls();" style="text-align:left; padding:16px 18px;">⭐ Vigtigt</button>
           <button class="big-btn" onclick="imp.type='akut'; renderImpuls();" style="text-align:left; padding:16px 18px;">🚨 Akut</button>
           <button class="big-btn" onclick="imp.type='impuls'; renderImpuls();" style="text-align:left; padding:16px 18px;">💭 Blot en impuls</button>
         </div>
-        <button class="btn-secondary" onclick="imp.stopped=null; renderImpuls();">← Tilbage</button>
+        <button class="btn-secondary" onclick="imp.stopped=null; imp.followUps=[]; imp.followUpDone=false; renderImpuls();">← Tilbage</button>
       </div>`;
     return;
   }
