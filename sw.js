@@ -2,6 +2,11 @@ const CACHE = 'vaekst-v2';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
+  // Fortæl alle åbne vinduer at der er en ny version klar
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(list => list.forEach(c => c.postMessage({ type: 'SW_UPDATED' })))
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -9,10 +14,13 @@ self.addEventListener('activate', e => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(list => list.forEach(c => c.postMessage({ type: 'SW_ACTIVATED' })))
   );
 });
 
 self.addEventListener('fetch', e => {
+  // Hent altid ny version fra netværk — fald tilbage til cache ved fejl
   e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });
 
