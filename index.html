@@ -934,10 +934,6 @@ function renderHome() {
         <span style="font-size:13px;font-weight:600;">🟡 Lyttende passiv</span>
         <span style="font-size:16px;font-weight:800;color:var(--yellow);">${ac.lyttende.d}${sep}${ac.lyttende.w}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🔴 Lukket ned</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lukket.d}${sep}${ac.lukket.w}</span>
-      </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(59,130,246,0.08);border-radius:10px;">
         <span style="font-size:13px;font-weight:600;">🔵 Voksen</span>
         <span style="font-size:16px;font-weight:800;color:var(--primary);">${ac.voksen.d}${sep}${ac.voksen.w}</span>
@@ -961,6 +957,10 @@ function renderHome() {
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
         <span style="font-size:13px;font-weight:600;">⚡ Gik for hurtigt frem</span>
         <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.forHurtigt.d}${sep}${ac.forHurtigt.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🔴 Lukkede ned i samtale</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lukket.d}${sep}${ac.lukket.w}</span>
       </div>
     </div>
   `;
@@ -2233,13 +2233,13 @@ function _getAdfaerd() {
 const ADFAERD_TYPES = [
   { type: 'naervaerende', score: 20,  label: '🟢 Nærværende og spurgte ind',                                                   scoreLabel: '+20 point',     rgb: '16,185,129' },
   { type: 'lyttende',     score: -10, label: '🟡 Lyttende men passiv',                                                          scoreLabel: '−10 point',    rgb: '245,158,11' },
-  { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',                                                        scoreLabel: '−30 point',    rgb: '239,68,68' },
   { type: 'voksen',       score: 0,   label: '🔵 Voksen reaktion',                                                              scoreLabel: 'tæller antal', rgb: '59,130,246' },
   { type: 'indreBarn',    score: 0,   label: '⚪ Indre barn reaktion',                                                           scoreLabel: 'tæller antal', rgb: '100,116,139' },
   { type: 'standsede',    score: 20,  label: '🛑 Standsede hende i automatadfærd og italesatte at det ikke var hendes opgave',  scoreLabel: '+20 point',    rgb: '139,92,246' },
   { type: 'afbroed',      score: -20, label: '🚫 Afbrød samtale',                                                                   scoreLabel: '−20 point',    rgb: '239,68,68' },
   { type: 'vrissede',     score: -20, label: '😤 Vrissede',                                                                         scoreLabel: '−20 point',    rgb: '239,68,68' },
   { type: 'forHurtigt',   score: -20, label: '⚡ Gik for hurtigt frem uden at informere',                                           scoreLabel: '−20 point',    rgb: '239,68,68' },
+  { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',                                                        scoreLabel: '−30 point',    rgb: '239,68,68' },
 ];
 
 let _adfaerdSession = {};
