@@ -605,7 +605,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v6';
+const APP_VERSION = 'v7';
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
 function openGPT(text) {
   if (text) {
@@ -1978,7 +1978,7 @@ function openGrib()  {
 function closeGrib() { document.getElementById('gribOverlay').classList.remove('show'); }
 
 function openImpuls() {
-  imp = { text: '', stopped: null, followUps: [], followUpDone: false, feelings: [], feelingsDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
+  imp = { text: '', stopped: null, followUps: [], followUpDone: false, feelings: [], feelingsDone: false, strategies: [], strategiesDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
   document.getElementById('impulsOverlay').classList.add('show');
   renderImpuls();
 }
@@ -2016,6 +2016,29 @@ function toggleFeeling(f) {
   renderImpuls();
 }
 
+const STRATEGIES = [
+  'Distraktion — gemmer mig i en aktivitet',
+  'Bliver passiv, bliver stille',
+  'Onani',
+  'Bliver impulsiv, handler på egen hånd',
+  'Lyver og bortforklarer',
+  'Flytter mig fysisk, forsvinder, flygter',
+  'Undgåelse',
+  'Indtager offerrolle',
+  'Hæver stemmen, går i forsvar',
+  'Retfærdiggøre, finder eksempler',
+  'Larmer med kropssprog',
+  'Passiv aggressiv',
+  'Grænseoverskridende adfærd',
+  'Ignorerer/gradbøjer indgået aftaler',
+];
+
+function toggleStrategy(s) {
+  const i = imp.strategies.indexOf(s);
+  if (i > -1) imp.strategies.splice(i, 1); else imp.strategies.push(s);
+  renderImpuls();
+}
+
 function saveImpulsNotStopped() {
   const d = getData();
   if (!d.impulses) d.impulses = [];
@@ -2023,6 +2046,7 @@ function saveImpulsNotStopped() {
     text: imp.text,
     stopped: false,
     feelings: imp.feelings,
+    strategies: imp.strategies,
     date: todayKey(),
     week: getWeekKey(),
     ts: Date.now(),
@@ -2100,8 +2124,29 @@ function renderImpuls() {
             </button>`;
           }).join('')}
         </div>
-        <button class="btn-primary" onclick="saveImpulsNotStopped()">💾 Gem</button>
+        <button class="btn-primary" onclick="imp.feelingsDone=true; renderImpuls();">Næste →</button>
         <button class="btn-secondary" onclick="imp.stopped=null; imp.feelings=[]; renderImpuls();">← Tilbage</button>
+      </div>`;
+    return;
+  }
+
+  // Fik ikke standset op → Strategier-liste
+  if (imp.stopped === false && imp.feelingsDone && !imp.strategiesDone) {
+    el.innerHTML = `
+      <div class="card">
+        <div style="background:rgba(245,158,11,0.1); border-radius:12px; padding:10px 14px; color:var(--yellow); font-weight:700; margin-bottom:14px;">➡️ Fik ikke standset op</div>
+        <div class="card-title" style="margin-bottom:12px;">Resultat - gamle strategier</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+          ${STRATEGIES.map(s => {
+            const on = imp.strategies.includes(s);
+            return `<button onclick="toggleStrategy('${s.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
+              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--red)' : 'var(--border)'};background:${on ? 'rgba(239,68,68,0.12)' : 'var(--card2)'};color:${on ? 'var(--red)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
+              ${on ? '✓ ' : ''}${s}
+            </button>`;
+          }).join('')}
+        </div>
+        <button class="btn-primary" onclick="saveImpulsNotStopped()">💾 Gem</button>
+        <button class="btn-secondary" onclick="imp.feelingsDone=false; renderImpuls();">← Tilbage</button>
       </div>`;
     return;
   }
