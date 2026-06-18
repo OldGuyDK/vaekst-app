@@ -605,7 +605,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v7';
+const APP_VERSION = 'v8';
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
 function openGPT(text) {
   if (text) {
@@ -968,6 +968,14 @@ function renderHome() {
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
         <span style="font-size:13px;font-weight:600;">🔴 Lukkede ned i samtale</span>
         <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lukket.d}${sep}${ac.lukket.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🫥 Greb hende ikke mentalt</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.grebIkke.d}${sep}${ac.grebIkke.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">📅 Var ikke på forkant</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.ikkeForKant.d}${sep}${ac.ikkeForKant.w}</span>
       </div>
     </div>
   `;
@@ -2357,6 +2365,8 @@ const ADFAERD_TYPES = [
   { type: 'vrissede',     score: -20, label: '😤 Vrissede',                                                                         scoreLabel: '−20 point',    rgb: '239,68,68' },
   { type: 'forHurtigt',   score: -20, label: '⚡ Gik for hurtigt frem uden at informere',                                           scoreLabel: '−20 point',    rgb: '239,68,68' },
   { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',                                                        scoreLabel: '−30 point',    rgb: '239,68,68' },
+  { type: 'grebIkke',    score: -10, label: '🫥 Greb hende ikke der hvor hun var (mentalt)',                                        scoreLabel: '−10 point',    rgb: '239,68,68' },
+  { type: 'ikkeForKant', score: -10, label: '📅 Var ikke på forkant, med noget der var planlagt',                                   scoreLabel: '−10 point',    rgb: '239,68,68' },
 ];
 
 let _adfaerdSession = {};
@@ -2409,6 +2419,8 @@ function getAdfaerdCounts() {
     afbroed:      { d: count('afbroed','d'),       w: count('afbroed','w') },
     vrissede:     { d: count('vrissede','d'),      w: count('vrissede','w') },
     forHurtigt:   { d: count('forHurtigt','d'),   w: count('forHurtigt','w') },
+    grebIkke:     { d: count('grebIkke','d'),     w: count('grebIkke','w') },
+    ikkeForKant:  { d: count('ikkeForKant','d'),  w: count('ikkeForKant','w') },
   };
 }
 
