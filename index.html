@@ -605,7 +605,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v11';
+const APP_VERSION = 'v12';
 const GPT = 'https://chatgpt.com/g/g-69c0603ff5ec81918a1746816664d91b-staerk-og-handlekraftig';
 function openGPT(text) {
   if (text) {
@@ -825,6 +825,33 @@ function renderHome() {
           return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.replace(/'/g, "\\'")}')">
             <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
             <div>${item}</div>
+          </div>`;
+        } else if (item.type === 'labyrinth') {
+          const subChecks = (_getKlarSubChecks()[item.label] || []);
+          const on = klarChecked.includes(item.label);
+          return `<div style="border-bottom:1px solid var(--border);">
+            <div class="dropdown-opt ${on ? 'on' : ''}" style="cursor:default;">
+              <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+              <div style="font-weight:700;">🧭 ${item.label}</div>
+            </div>
+            <div style="padding:0 8px 12px;">
+              ${item.questions.map((q, qi) => {
+                const checked = !!subChecks[qi];
+                return `<div style="margin-bottom:12px;">
+                  <div onclick="toggleKlarSubCheck('${item.label.replace(/'/g,"\\'")}',${qi})"
+                    style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid ${checked ? 'var(--green)' : 'var(--border)'};background:${checked ? 'rgba(16,185,129,0.08)' : 'var(--card)'};cursor:pointer;margin-bottom:6px;">
+                    <div style="width:20px;height:20px;min-width:20px;border-radius:50%;border:2px solid ${checked ? 'var(--green)' : 'var(--border)'};background:${checked ? 'var(--green)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:900;">${checked ? '✓' : ''}</div>
+                    <div>
+                      <div style="font-weight:700;font-size:13px;color:${checked ? 'var(--green)' : 'var(--text)'};">${qi+1}. ${q.q}</div>
+                      <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">${q.hint}</div>
+                    </div>
+                  </div>
+                  <div style="padding:0 4px 0 8px;">
+                    ${q.examples.map(ex => `<div style="font-size:12px;color:var(--muted);padding:4px 8px;border-left:2px solid var(--border);margin-bottom:4px;line-height:1.5;font-style:italic;">${ex}</div>`).join('')}
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
           </div>`;
         } else if (item.info !== undefined) {
           // Object with info text
@@ -1560,7 +1587,30 @@ const KLAR_ITEMS = [
   'Er jeg på forkant med det vi har aftalt?',
   'Plan for dagen?',
   'Ændringer for dagen?',
-  'Ny info der skal meldes ud?',
+  { label: 'Vigtig info der skal meldes ud?', type: 'labyrinth', questions: [
+    { q: 'Hvad er det konkrete?', hint: 'Sig det i én sætning. Ingen baggrund, ingen kontekst endnu.', examples: [
+      '"Jeg har ikke bestilt [X]"',
+      '"Jeg har glemt at ringe til [Y]"',
+    ]},
+    { q: 'Hvad har jeg allerede gjort?', hint: 'Find mindst ét ting du har håndteret, overvejet eller planlagt.', examples: [
+      '"Jeg har kigget på hvornår det senest kan gøres"',
+      '"Jeg har et forslag til hvordan vi løser det"',
+    ]},
+    { q: 'Hvad er det mindste jeg beder om?', hint: 'Beder du om information, en beslutning, eller praktisk hjælp? Vær specifik og lille.', examples: [
+      '"Jeg beder bare om at du ved det"',
+      '"Jeg beder om at du vælger mellem A og B"',
+      '"Jeg beder om 10 minutter til at løse det sammen"',
+    ]},
+    { q: 'Hvad viser at jeg har tænkt på dig?', hint: 'Find én sætning der anerkender hendes situation.', examples: [
+      '"Jeg ved du har meget i dag..."',
+      '"Det her er ikke ideelt tidspunkt, men jeg vil hellere sige det nu..."',
+      '"Jeg har prøvet at gøre det så overskueligt som muligt..."',
+    ]},
+    { q: 'Start med "Jeg har..." — ikke "Vi skal..."', hint: 'Din åbningssætning sætter tonen for hvordan det modtages.', examples: [
+      '"Jeg skal fortælle dig noget — jeg har [konkret]. Jeg har allerede [løsning]. Det eneste jeg beder om er [lille ting]."',
+      '"Jeg er sent ude, men her er hvad jeg gør nu..."',
+    ]},
+  ]},
   'Uselvisk, uopfordret initiativ',
   { label: 'Tilbyde min assistance', info: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
   { label: 'Tage lead på eget initiativ', info: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
@@ -2314,6 +2364,7 @@ function _getStops() {
 
 let _klarItems = null;
 let _klarSubs = null;
+let _klarSubChecks = null;
 function _getKlarItems() {
   if (_klarItems === null) _klarItems = (getData().klar || {})[todayKey()] || [];
   return _klarItems;
@@ -2322,13 +2373,39 @@ function _getKlarSubs() {
   if (_klarSubs === null) _klarSubs = (getData().klarSubs || {})[todayKey()] || {};
   return _klarSubs;
 }
+function _getKlarSubChecks() {
+  if (_klarSubChecks === null) _klarSubChecks = (getData().klarSubChecks || {})[todayKey()] || {};
+  return _klarSubChecks;
+}
 function _saveKlarItems() {
   const d = getData();
   if (!d.klar) d.klar = {};
   d.klar[todayKey()] = _klarItems;
   if (!d.klarSubs) d.klarSubs = {};
   d.klarSubs[todayKey()] = _klarSubs;
+  if (!d.klarSubChecks) d.klarSubChecks = {};
+  d.klarSubChecks[todayKey()] = _klarSubChecks;
   setData(d);
+}
+
+function toggleKlarSubCheck(label, idx) {
+  const checks = _getKlarSubChecks();
+  if (!checks[label]) checks[label] = [];
+  checks[label][idx] = !checks[label][idx];
+  _klarSubChecks = checks;
+  // Marker parent som done hvis alle spørgsmål er afkrydset
+  const item = KLAR_ITEMS.find(i => i.label === label);
+  if (item && item.questions) {
+    const allDone = item.questions.every((_, i) => checks[label][i]);
+    const klarChecked = _getKlarItems();
+    const parentIdx = klarChecked.indexOf(label);
+    if (allDone && parentIdx === -1) klarChecked.push(label);
+    else if (!allDone && parentIdx > -1) klarChecked.splice(parentIdx, 1);
+  }
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
 }
 
 let _klarFokus = null;
