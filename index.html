@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v29';
+const APP_VERSION = 'v30';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2575,8 +2575,11 @@ function renderForkantStikord() {
   if (listEl) {
     listEl.innerHTML = items.map((s, i) => `
       <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="flex:1;font-size:13px;color:${s.afstemt ? 'var(--muted)' : 'var(--primary)'};font-weight:600;${s.afstemt ? 'text-decoration:line-through;' : ''}">📌 ${s.text}</span>
-        <button onclick="toggleForkantAfstemt(${i})" style="padding:4px 10px;border-radius:6px;border:2px solid ${s.afstemt ? 'var(--green)' : 'var(--border)'};background:${s.afstemt ? 'rgba(16,185,129,0.12)' : 'transparent'};color:${s.afstemt ? 'var(--green)' : 'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${s.afstemt ? '✓ Afstemt' : 'Afstemt'}</button>
+        <span style="flex:1;font-size:13px;color:var(--primary);font-weight:600;">📌 ${s.text}</span>
+        <div onclick="toggleForkantAfstemt(${i})" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${s.afstemt ? 'var(--green)' : 'var(--border)'};background:${s.afstemt ? 'var(--green)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:900;flex-shrink:0;">${s.afstemt ? '✓' : ''}</div>
+          <span style="font-size:12px;color:${s.afstemt ? 'var(--green)' : 'var(--muted)'};font-weight:600;">afstemt</span>
+        </div>
         <button onclick="removeForkantStikord(${i})" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px;">×</button>
       </div>`).join('');
   }
