@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v30';
+const APP_VERSION = 'v31';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -822,13 +822,14 @@ function renderHome() {
     <div class="dropdown-list" id="klarDropdown">
       ${KLAR_ITEMS.map(item => {
         if (item.type === 'text') {
-          return `<div class="dropdown-opt" style="flex-direction:column;align-items:flex-start;gap:8px;cursor:default;" onclick="event.stopPropagation()">
+          return `<div class="dropdown-opt" style="flex-direction:column;align-items:flex-start;gap:8px;cursor:default;border-bottom:1px solid var(--border);" onclick="event.stopPropagation()">
             <div style="font-weight:700;font-size:14px;">${item.label}</div>
+            <div id="forkantStikordList" style="width:100%;"></div>
             <div style="display:flex;gap:8px;width:100%;">
-              <input id="fokusInput" type="text" value="${klarFokus.replace(/"/g,'&quot;')}" placeholder="Skriv hvad du er på forkant med..."
-                style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--green);font-size:14px;font-weight:600;font-family:inherit;"
-                onkeydown="if(event.key==='Enter')onFokusInput(this.value)">
-              <button onclick="onFokusInput(document.getElementById('fokusInput').value)" style="padding:8px 14px;border-radius:8px;background:var(--green);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Overfør</button>
+              <input id="forkantInput" type="text" placeholder="Tilføj emne og overfør..."
+                style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;font-family:inherit;"
+                onkeydown="if(event.key==='Enter')addForkantStikord()">
+              <button onclick="addForkantStikord()" style="padding:8px 14px;border-radius:8px;background:var(--primary);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Overfør</button>
             </div>
           </div>`;
         } else if (item.type === 'initiative') {
@@ -910,18 +911,7 @@ function renderHome() {
           </div>`;
         }
       }).join('')}
-      <div style="padding:10px 8px 4px;" onclick="event.stopPropagation()">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:0.05em;">DAGENS STIKORD</div>
-        <div id="forkantStikordList"></div>
-        <div style="display:flex;gap:8px;margin-top:6px;">
-          <input id="forkantInput" type="text" placeholder="Tilføj stikord og overfør..."
-            style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;"
-            onkeydown="if(event.key==='Enter')addForkantStikord()">
-          <button onclick="addForkantStikord()" style="padding:8px 14px;border-radius:8px;background:var(--primary);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Overfør</button>
-        </div>
-      </div>
     </div>
-    ${klarFokus.trim() ? `<div id="klarFokusDisplay" style="margin-top:10px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--green);font-size:15px;font-weight:700;line-height:1.4;">🎯 På forkant med: ${klarFokus}</div>` : `<div id="klarFokusDisplay" style="display:none;"></div>`}
     <div id="forkantStikordDisplay" style="margin-top:8px;${_getForkantStikord().length ? '' : 'display:none;'}">
       ${_getForkantStikord().map(s => `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-radius:8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);margin-bottom:6px;"><span style="font-size:14px;font-weight:600;color:var(--primary);">📌 ${s}</span></div>`).join('')}
     </div>
