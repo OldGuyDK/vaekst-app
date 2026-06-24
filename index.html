@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v26';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -812,7 +812,7 @@ function renderHome() {
   const klarChecked = _getKlarItems();
   const klarSubs = _getKlarSubs();
   const klarFokus = _getKlarFokus();
-  const initiativStikord = _getInitiativStikord();
+  const initiativStikord = _getInitiativStikord(); // array
   const klarDone = klarChecked.length === KLAR_ITEMS.length && klarFokus.trim();
   document.getElementById('homeKlarCard').innerHTML = `
     <button class="dropdown-toggle ${klarDone ? 'has-selection' : ''}" onclick="toggleDropdown('klarDropdown')" style="width:100%;">
@@ -829,16 +829,19 @@ function renderHome() {
           </div>`;
         } else if (item.type === 'initiative') {
           const on = klarChecked.includes(item.label);
-          const stikord = initiativStikord;
           return `<div style="border-bottom:1px solid var(--border);">
             <div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.label.replace(/'/g,"\\'")}')">
               <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
               <div>${item.label}</div>
             </div>
             ${on ? `<div style="padding:4px 8px 12px;" onclick="event.stopPropagation()">
-              <input type="text" value="${stikord.replace(/"/g,'&quot;')}" placeholder="Stikord til ugen..."
-                oninput="saveInitiativStikord(this.value)"
-                style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:#a78bfa;font-size:13px;font-weight:600;font-family:inherit;">
+              <div id="initiativList"></div>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <input id="initiativInput" type="text" placeholder="Tilføj stikord..."
+                  style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:#a78bfa;font-size:13px;font-weight:600;font-family:inherit;"
+                  onkeydown="if(event.key==='Enter')addInitiativStikord()">
+                <button onclick="addInitiativStikord()" style="padding:8px 14px;border-radius:8px;background:rgba(139,92,246,0.2);border:none;color:#a78bfa;font-size:18px;font-weight:900;cursor:pointer;">+</button>
+              </div>
             </div>` : ''}
           </div>`;
         } else if (typeof item === 'string') {
@@ -905,8 +908,11 @@ function renderHome() {
       }).join('')}
     </div>
     ${klarFokus.trim() ? `<div id="klarFokusDisplay" style="margin-top:10px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--green);font-size:15px;font-weight:700;line-height:1.4;">🎯 ${klarFokus}</div>` : `<div id="klarFokusDisplay" style="display:none;"></div>`}
-    ${initiativStikord.trim() ? `<div id="initiativResultat" style="margin-top:8px;padding:10px 14px;border-radius:10px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;font-size:14px;font-weight:700;line-height:1.4;">🌟 ${initiativStikord}</div>` : `<div id="initiativResultat" style="display:none;"></div>`}
+    <div id="initiativResultat" style="margin-top:8px;padding:10px 14px;border-radius:10px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;font-size:14px;font-weight:700;line-height:1.8;${initiativStikord.length ? '' : 'display:none;'}">
+      ${initiativStikord.map(s => `<div>🌟 ${s}</div>`).join('')}
+    </div>
   `;
+  renderInitiativList();
 
   const done = todaysDone();
   const skipped = todaysSkipped();
@@ -2515,17 +2521,51 @@ function toggleKlarSubCheck(label, idx) {
 
 let _initiativStikord = null;
 function _getInitiativStikord() {
-  if (_initiativStikord === null) _initiativStikord = (getData().initiativStikord || {})[getWeekKey()] || '';
+  if (_initiativStikord === null) _initiativStikord = (getData().initiativStikord || {})[getWeekKey()] || [];
+  if (!Array.isArray(_initiativStikord)) _initiativStikord = _initiativStikord ? [_initiativStikord] : [];
   return _initiativStikord;
 }
-function saveInitiativStikord(text) {
-  _initiativStikord = text;
+function _saveInitiativStikord() {
   const d = getData();
   if (!d.initiativStikord) d.initiativStikord = {};
-  d.initiativStikord[getWeekKey()] = text;
+  d.initiativStikord[getWeekKey()] = _initiativStikord;
   setData(d);
+  renderInitiativResultat();
+}
+function addInitiativStikord() {
+  const el = document.getElementById('initiativInput');
+  const text = el ? el.value.trim() : '';
+  if (!text) return;
+  _getInitiativStikord().push(text);
+  _saveInitiativStikord();
+  if (el) el.value = '';
+  renderInitiativList();
+}
+function removeInitiativStikord(idx) {
+  _getInitiativStikord().splice(idx, 1);
+  _saveInitiativStikord();
+  renderInitiativList();
+}
+function renderInitiativList() {
+  const el = document.getElementById('initiativList');
+  if (!el) return;
+  const items = _getInitiativStikord();
+  el.innerHTML = items.map((s, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="flex:1;font-size:13px;color:#a78bfa;font-weight:600;">🌟 ${s}</span>
+      <button onclick="removeInitiativStikord(${i})" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px;">×</button>
+    </div>`).join('');
+}
+function renderInitiativResultat() {
   const el = document.getElementById('initiativResultat');
-  if (el) { el.textContent = text ? '🌟 ' + text : ''; el.style.display = text ? 'block' : 'none'; }
+  if (!el) return;
+  const items = _getInitiativStikord();
+  if (items.length) {
+    el.style.display = 'block';
+    el.innerHTML = items.map(s => `<div>🌟 ${s}</div>`).join('');
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 let _klarFokus = null;
