@@ -360,6 +360,15 @@
   <button onclick="doAppUpdate()" style="background:var(--green);color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Opdater nu</button>
 </div>
 
+<!-- KLAR TIL CHECK-IN OVERLAY -->
+<div class="panic-overlay" id="readyCheckOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:var(--primary);">🧭 Klar til at checke ind?</div>
+    <button class="close-x" onclick="closeReadyCheck()">✕</button>
+  </div>
+  <div id="readyCheckContent"></div>
+</div>
+
 <!-- PANIC OVERLAY -->
 <div class="panic-overlay" id="panicOverlay">
   <div class="panic-top">
@@ -604,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v18';
+const APP_VERSION = 'v19';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -1294,6 +1303,7 @@ function showSessionPicker() {
   document.querySelector('#view-checkin .page-header p').textContent = 'Vælg et tidspunkt';
   const skipped = todaysSkipped();
   document.getElementById('ciContent').innerHTML = `
+    <button onclick="openReadyCheck()" style="width:100%;margin-bottom:16px;padding:14px;border-radius:14px;border:2px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);color:var(--primary);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">🧭 Klar til at checke ind?</button>
     <div class="session-grid">
       ${SESSIONS.map((s,i) => {
         const isDone = done.includes(s);
@@ -1333,6 +1343,86 @@ function showCiForm() {
   const isEdit = getEntries().some(e => e.date === todayKey() && e.session === ci.session);
   document.querySelector('#view-checkin .page-header p').textContent = isEdit ? '✏️ Retter: ' + ci.session : ci.session;
   renderCiStep();
+}
+
+// ---- KLAR TIL CHECK-IN ----
+let rc = { step: 0, knowsHerState: null, herState: null, hasPlan: null, hasOpening: null };
+
+function openReadyCheck() {
+  rc = { step: 0, knowsHerState: null, herState: null, hasPlan: null, hasOpening: null };
+  document.getElementById('readyCheckOverlay').classList.add('show');
+  renderReadyCheck();
+}
+
+function closeReadyCheck() {
+  document.getElementById('readyCheckOverlay').classList.remove('show');
+}
+
+function renderReadyCheck() {
+  const el = document.getElementById('readyCheckContent');
+  const btn = (label, color, fn) => `<button onclick="${fn}" style="width:100%;padding:16px;border-radius:12px;border:none;background:${color};color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;">${label}</button>`;
+  const chip = (label, val, current, fn) => `<button onclick="${fn}" style="padding:12px 16px;border-radius:10px;border:2px solid ${current===val ? 'var(--primary)' : 'var(--border)'};background:${current===val ? 'rgba(59,130,246,0.15)' : 'var(--card2)'};color:${current===val ? 'var(--primary)' : 'var(--text)'};font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">${label}</button>`;
+  const card = (content) => `<div class="card">${content}</div>`;
+  const title = (t) => `<div class="card-title" style="margin-bottom:16px;">${t}</div>`;
+  const sub = (t) => `<div class="card-sub" style="margin-bottom:20px;line-height:1.6;">${t}</div>`;
+  const next = (fn) => `<button onclick="${fn}" class="btn-primary" style="margin-top:8px;">Videre →</button>`;
+
+  if (rc.step === 0) {
+    el.innerHTML = card(`
+      ${title('Er der en tilstand jeg føler mig sikker på hun er i?')}
+      ${btn('Ja', 'var(--green)', 'rc.knowsHerState=true; rc.step=1; renderReadyCheck();')}
+      ${btn('Nej', 'var(--border)', 'rc.knowsHerState=false; rc.step=2; renderReadyCheck();')}
+    `);
+  } else if (rc.step === 1) {
+    el.innerHTML = card(`
+      ${title('Hvad er hendes tilstand?')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        ${['Neutral','Glad','Træt','Vred'].map(s => chip(s, s, rc.herState, `rc.herState='${s}'; renderReadyCheck();`)).join('')}
+      </div>
+      ${rc.herState ? next('rc.step=2; renderReadyCheck();') : ''}
+    `);
+  } else if (rc.step === 2) {
+    el.innerHTML = card(`
+      ${title('Har jeg en plan for hvordan jeg vil møde hende?')}
+      ${btn('Ja', 'var(--green)', 'rc.hasPlan=true; rc.step=4; renderReadyCheck();')}
+      ${btn('Nej', 'var(--border)', 'rc.hasPlan=false; rc.step=3; renderReadyCheck();')}
+    `);
+  } else if (rc.step === 3) {
+    el.innerHTML = card(`
+      ${title('Hvad vil være den sikre måde?')}
+      ${sub('Tag et øjeblik til at mærke efter.<br>Hvad ved du allerede fungerer?<br>Hvad har vist sig sikkert tidligere?')}
+      ${next('rc.step=4; renderReadyCheck();')}
+    `);
+  } else if (rc.step === 4) {
+    el.innerHTML = card(`
+      ${title('Har jeg en åbning klar?')}
+      ${btn('Ja', 'var(--green)', 'rc.hasOpening=true; rc.step=5; renderReadyCheck();')}
+      ${btn('Nej', 'var(--border)', 'rc.hasOpening=false; rc.step=5; renderReadyCheck();')}
+    `);
+  } else if (rc.step === 5) {
+    if (rc.hasOpening) {
+      el.innerHTML = card(`
+        ${title('Hvordan vil jeg fortsætte derfra?')}
+        ${sub('Du har åbningen.<br>Mærk efter hvad der naturligt følger.<br>Hold det enkelt og konkret.')}
+        ${next('rc.step=6; renderReadyCheck();')}
+      `);
+    } else {
+      el.innerHTML = card(`
+        ${title('Hvad er det bedste jeg kan tilbyde?')}
+        ${sub('Du behøver ikke have det perfekte at sige.<br>Hvad er den mest ærlige, rolige tilstedeværelse du kan møde hende med lige nu?')}
+        ${next('rc.step=6; renderReadyCheck();')}
+      `);
+    }
+  } else if (rc.step === 6) {
+    el.innerHTML = card(`
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:48px;margin-bottom:12px;">✅</div>
+        <div class="card-title" style="font-size:22px;margin-bottom:8px;">Klar!</div>
+        <div style="color:var(--muted);font-size:14px;margin-bottom:24px;">Du har gjort det forarbejde du kan.<br>Gå ind med det du har.</div>
+      </div>
+      <button onclick="closeReadyCheck()" class="btn-primary">Vælg check-in tidspunkt →</button>
+    `);
+  }
 }
 
 function renderCiStep() {
