@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v23';
+const APP_VERSION = 'v24';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -812,10 +812,11 @@ function renderHome() {
   const klarChecked = _getKlarItems();
   const klarSubs = _getKlarSubs();
   const klarFokus = _getKlarFokus();
+  const initiativStikord = _getInitiativStikord();
   const klarDone = klarChecked.length === KLAR_ITEMS.length && klarFokus.trim();
   document.getElementById('homeKlarCard').innerHTML = `
     <button class="dropdown-toggle ${klarDone ? 'has-selection' : ''}" onclick="toggleDropdown('klarDropdown')" style="width:100%;">
-      <span style="font-weight:700;">Klar til dagen &nbsp;<span style="color:var(--muted);font-size:13px;font-weight:400;">${klarChecked.length + (klarFokus.trim() ? 1 : 0)}/${KLAR_ITEMS.length}</span></span>
+      <span style="font-weight:700;">På forkant &nbsp;<span style="color:var(--muted);font-size:13px;font-weight:400;">${klarChecked.length + (klarFokus.trim() ? 1 : 0)}/${KLAR_ITEMS.length}</span></span>
       <span>${klarDone ? '✅' : '▾'}</span>
     </button>
     <div class="dropdown-list" id="klarDropdown">
@@ -825,6 +826,20 @@ function renderHome() {
             <div style="font-weight:700;font-size:14px;">${item.label}</div>
             <input type="text" value="${klarFokus.replace(/"/g,'&quot;')}" placeholder="Skriv dit fokuspunkt..." oninput="onFokusInput(this.value)"
               style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--green);font-size:14px;font-weight:600;font-family:inherit;">
+          </div>`;
+        } else if (item.type === 'initiative') {
+          const on = klarChecked.includes(item.label);
+          const stikord = initiativStikord;
+          return `<div style="border-bottom:1px solid var(--border);">
+            <div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleKlarItem('${item.label.replace(/'/g,"\\'")}')">
+              <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+              <div>${item.label}</div>
+            </div>
+            ${on ? `<div style="padding:4px 8px 12px;" onclick="event.stopPropagation()">
+              <input type="text" value="${stikord.replace(/"/g,'&quot;')}" placeholder="Stikord til ugen..."
+                oninput="saveInitiativStikord(this.value)"
+                style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:#a78bfa;font-size:13px;font-weight:600;font-family:inherit;">
+            </div>` : ''}
           </div>`;
         } else if (typeof item === 'string') {
           const on = klarChecked.includes(item);
@@ -890,6 +905,7 @@ function renderHome() {
       }).join('')}
     </div>
     ${klarFokus.trim() ? `<div id="klarFokusDisplay" style="margin-top:10px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--green);font-size:15px;font-weight:700;line-height:1.4;">🎯 ${klarFokus}</div>` : `<div id="klarFokusDisplay" style="display:none;"></div>`}
+    ${initiativStikord.trim() ? `<div id="initiativResultat" style="margin-top:8px;padding:10px 14px;border-radius:10px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;font-size:14px;font-weight:700;line-height:1.4;">🌟 ${initiativStikord}</div>` : `<div id="initiativResultat" style="display:none;"></div>`}
   `;
 
   const done = todaysDone();
@@ -922,7 +938,7 @@ function renderHome() {
   document.getElementById('homeSessionCard').innerHTML = `
     <button class="dropdown-toggle" onclick="toggleDropdown('sessionDropdown')" style="width:100%;">
       <span style="display:flex;align-items:center;gap:10px;">
-        <span style="font-weight:700;">Dagens check-ins</span>
+        <span style="font-weight:700;">Dagens resultater</span>
         <span style="display:flex;gap:4px;align-items:center;">${dots}</span>
         <span style="color:var(--muted);font-size:13px;">${doneCount}/${SESSIONS.length}</span>
       </span>
@@ -1697,7 +1713,7 @@ const KLAR_ITEMS = [
       '"Jeg er sent ude, men her er hvad jeg gør nu..."',
     ]},
   ]},
-  'Uselvisk, uopfordret initiativ',
+  { label: 'Uselvisk, uopfordret initiativ', type: 'initiative' },
   { label: 'Tilbyde min assistance', info: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
   { label: 'Tage lead på eget initiativ', info: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
   { label: 'Initiativ - Omsorg', subs: [
@@ -2495,6 +2511,21 @@ function toggleKlarSubCheck(label, idx) {
     circle.textContent = checked ? '✓' : '';
   }
   if (titleEl) titleEl.style.color = checked ? 'var(--green)' : 'var(--text)';
+}
+
+let _initiativStikord = null;
+function _getInitiativStikord() {
+  if (_initiativStikord === null) _initiativStikord = (getData().initiativStikord || {})[getWeekKey()] || '';
+  return _initiativStikord;
+}
+function saveInitiativStikord(text) {
+  _initiativStikord = text;
+  const d = getData();
+  if (!d.initiativStikord) d.initiativStikord = {};
+  d.initiativStikord[getWeekKey()] = text;
+  setData(d);
+  const el = document.getElementById('initiativResultat');
+  if (el) { el.textContent = text ? '🌟 ' + text : ''; el.style.display = text ? 'block' : 'none'; }
 }
 
 let _klarFokus = null;
