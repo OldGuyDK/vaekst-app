@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v28';
+const APP_VERSION = 'v29';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2536,7 +2536,11 @@ function toggleKlarSubCheck(label, idx) {
 
 let _forkantStikord = null;
 function _getForkantStikord() {
-  if (_forkantStikord === null) _forkantStikord = (getData().forkantStikord || {})[todayKey()] || [];
+  if (_forkantStikord === null) {
+    const raw = (getData().forkantStikord || {})[todayKey()] || [];
+    // Migrer gamle string-entries til objekter
+    _forkantStikord = raw.map(e => typeof e === 'string' ? { text: e, afstemt: false } : e);
+  }
   return _forkantStikord;
 }
 function _saveForkantStikord() {
@@ -2549,7 +2553,7 @@ function addForkantStikord() {
   const el = document.getElementById('forkantInput');
   const text = el ? el.value.trim() : '';
   if (!text) return;
-  _getForkantStikord().push(text);
+  _getForkantStikord().push({ text, afstemt: false });
   _saveForkantStikord();
   if (el) el.value = '';
   renderForkantStikord();
@@ -2559,20 +2563,31 @@ function removeForkantStikord(idx) {
   _saveForkantStikord();
   renderForkantStikord();
 }
+function toggleForkantAfstemt(idx) {
+  const items = _getForkantStikord();
+  items[idx].afstemt = !items[idx].afstemt;
+  _saveForkantStikord();
+  renderForkantStikord();
+}
 function renderForkantStikord() {
   const items = _getForkantStikord();
   const listEl = document.getElementById('forkantStikordList');
   if (listEl) {
     listEl.innerHTML = items.map((s, i) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
-        <span style="flex:1;font-size:13px;color:var(--primary);font-weight:600;">📌 ${s}</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="flex:1;font-size:13px;color:${s.afstemt ? 'var(--muted)' : 'var(--primary)'};font-weight:600;${s.afstemt ? 'text-decoration:line-through;' : ''}">📌 ${s.text}</span>
+        <button onclick="toggleForkantAfstemt(${i})" style="padding:4px 10px;border-radius:6px;border:2px solid ${s.afstemt ? 'var(--green)' : 'var(--border)'};background:${s.afstemt ? 'rgba(16,185,129,0.12)' : 'transparent'};color:${s.afstemt ? 'var(--green)' : 'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">${s.afstemt ? '✓ Afstemt' : 'Afstemt'}</button>
         <button onclick="removeForkantStikord(${i})" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px;">×</button>
       </div>`).join('');
   }
   const dispEl = document.getElementById('forkantStikordDisplay');
   if (dispEl) {
     dispEl.style.display = items.length ? 'block' : 'none';
-    dispEl.innerHTML = items.map(s => `<div style="display:flex;align-items:center;padding:6px 12px;border-radius:8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);margin-bottom:6px;font-size:14px;font-weight:600;color:var(--primary);">📌 ${s}</div>`).join('');
+    dispEl.innerHTML = items.map(s => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-radius:8px;background:${s.afstemt ? 'rgba(16,185,129,0.08)' : 'rgba(59,130,246,0.08)'};border:1px solid ${s.afstemt ? 'rgba(16,185,129,0.25)' : 'rgba(59,130,246,0.2)'};margin-bottom:6px;">
+        <span style="font-size:14px;font-weight:600;color:${s.afstemt ? 'var(--green)' : 'var(--primary)'};">📌 ${s.text}</span>
+        ${s.afstemt ? '<span style="font-size:12px;color:var(--green);font-weight:700;">✓ afstemt</span>' : ''}
+      </div>`).join('');
   }
 }
 
