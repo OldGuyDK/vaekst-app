@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2684,7 +2684,8 @@ if ('serviceWorker' in navigator) {
 }
 
 async function doAppUpdate() {
-  // Ryd SW-caches og naviger til frisk URL
+  // Gem tidspunkt for opdateringsforsøg — forhindrer banner-loop i 3 min
+  localStorage.setItem('lastUpdateAttempt', Date.now());
   if ('serviceWorker' in navigator) {
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg) await reg.unregister();
@@ -2696,6 +2697,9 @@ async function doAppUpdate() {
 
 // Tjek om der er en ny version — ved load og hver gang appen kommer i forgrunden
 async function checkAppVersion() {
+  // Vis ikke banner i 3 min efter opdateringsforsøg (CDN kan være forsinket)
+  const lastAttempt = parseInt(localStorage.getItem('lastUpdateAttempt') || '0');
+  if (Date.now() - lastAttempt < 3 * 60 * 1000) return;
   try {
     const res = await fetch('https://raw.githubusercontent.com/OldGuyDK/vaekst-app/main/version.json?_=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
