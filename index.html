@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2474,15 +2474,6 @@ function toggleKlarSubCheck(label, idx) {
   if (!checks[label]) checks[label] = [];
   checks[label][idx] = !checks[label][idx];
   _klarSubChecks = checks;
-  // Marker parent som done hvis alle spørgsmål er afkrydset
-  const item = KLAR_ITEMS.find(i => i.label === label);
-  if (item && item.questions) {
-    const allDone = item.questions.every((_, i) => checks[label][i]);
-    const klarChecked = _getKlarItems();
-    const parentIdx = klarChecked.indexOf(label);
-    if (allDone && parentIdx === -1) klarChecked.push(label);
-    else if (!allDone && parentIdx > -1) klarChecked.splice(parentIdx, 1);
-  }
   _saveKlarItems();
   renderHome();
   const dd = document.getElementById('klarDropdown');
