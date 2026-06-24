@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v26';
+const APP_VERSION = 'v27';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -906,13 +906,24 @@ function renderHome() {
           </div>`;
         }
       }).join('')}
+      <div style="padding:10px 8px 4px;" onclick="event.stopPropagation()">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:0.05em;">DAGENS STIKORD</div>
+        <div id="forkantStikordList"></div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input id="forkantInput" type="text" placeholder="Tilføj stikord og overfør..."
+            style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;"
+            onkeydown="if(event.key==='Enter')addForkantStikord()">
+          <button onclick="addForkantStikord()" style="padding:8px 14px;border-radius:8px;background:var(--primary);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Overfør</button>
+        </div>
+      </div>
     </div>
     ${klarFokus.trim() ? `<div id="klarFokusDisplay" style="margin-top:10px;padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--green);font-size:15px;font-weight:700;line-height:1.4;">🎯 ${klarFokus}</div>` : `<div id="klarFokusDisplay" style="display:none;"></div>`}
-    <div id="initiativResultat" style="margin-top:8px;padding:10px 14px;border-radius:10px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;font-size:14px;font-weight:700;line-height:1.8;${initiativStikord.length ? '' : 'display:none;'}">
-      ${initiativStikord.map(s => `<div>🌟 ${s}</div>`).join('')}
+    <div id="forkantStikordDisplay" style="margin-top:8px;${_getForkantStikord().length ? '' : 'display:none;'}">
+      ${_getForkantStikord().map(s => `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-radius:8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);margin-bottom:6px;"><span style="font-size:14px;font-weight:600;color:var(--primary);">📌 ${s}</span></div>`).join('')}
     </div>
   `;
   renderInitiativList();
+  renderForkantStikord();
 
   const done = todaysDone();
   const skipped = todaysSkipped();
@@ -2517,6 +2528,48 @@ function toggleKlarSubCheck(label, idx) {
     circle.textContent = checked ? '✓' : '';
   }
   if (titleEl) titleEl.style.color = checked ? 'var(--green)' : 'var(--text)';
+}
+
+let _forkantStikord = null;
+function _getForkantStikord() {
+  if (_forkantStikord === null) _forkantStikord = (getData().forkantStikord || {})[todayKey()] || [];
+  return _forkantStikord;
+}
+function _saveForkantStikord() {
+  const d = getData();
+  if (!d.forkantStikord) d.forkantStikord = {};
+  d.forkantStikord[todayKey()] = _forkantStikord;
+  setData(d);
+}
+function addForkantStikord() {
+  const el = document.getElementById('forkantInput');
+  const text = el ? el.value.trim() : '';
+  if (!text) return;
+  _getForkantStikord().push(text);
+  _saveForkantStikord();
+  if (el) el.value = '';
+  renderForkantStikord();
+}
+function removeForkantStikord(idx) {
+  _getForkantStikord().splice(idx, 1);
+  _saveForkantStikord();
+  renderForkantStikord();
+}
+function renderForkantStikord() {
+  const items = _getForkantStikord();
+  const listEl = document.getElementById('forkantStikordList');
+  if (listEl) {
+    listEl.innerHTML = items.map((s, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="flex:1;font-size:13px;color:var(--primary);font-weight:600;">📌 ${s}</span>
+        <button onclick="removeForkantStikord(${i})" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px;">×</button>
+      </div>`).join('');
+  }
+  const dispEl = document.getElementById('forkantStikordDisplay');
+  if (dispEl) {
+    dispEl.style.display = items.length ? 'block' : 'none';
+    dispEl.innerHTML = items.map(s => `<div style="display:flex;align-items:center;padding:6px 12px;border-radius:8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);margin-bottom:6px;font-size:14px;font-weight:600;color:var(--primary);">📌 ${s}</div>`).join('');
+  }
 }
 
 let _initiativStikord = null;
