@@ -613,7 +613,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v24';
+const APP_VERSION = 'v25';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2740,7 +2740,8 @@ async function checkAppVersion() {
   const lastAttempt = parseInt(localStorage.getItem('lastUpdateAttempt') || '0');
   if (Date.now() - lastAttempt < 3 * 60 * 1000) return;
   try {
-    const res = await fetch('https://raw.githubusercontent.com/OldGuyDK/vaekst-app/main/version.json?_=' + Date.now(), { cache: 'no-store' });
+    const base = location.origin + location.pathname.replace(/\?.*$/, '').replace(/[^/]*$/, '');
+    const res = await fetch(base + 'version.json?_=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     if (data.v && data.v !== APP_VERSION) {
       const b = document.getElementById('updateBanner');
