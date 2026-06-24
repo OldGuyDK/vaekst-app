@@ -604,7 +604,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v16';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -1329,7 +1329,7 @@ function showCiForm() {
 }
 
 function renderCiStep() {
-  const TOTAL = 6;
+  const TOTAL = 5;
   const dots = Array.from({length: TOTAL}, (_,i) =>
     `<div class="step-dot ${i < ci.step ? 'done' : i === ci.step ? 'now' : ''}"></div>`
   ).join('');
@@ -1452,29 +1452,11 @@ function renderCiStep() {
             <button class="chip ${ci.initiatives.includes(iv.label) ? 'on' : ''}" onclick="toggleInitiative('${iv.label}')">${iv.label}</button>`
           ).join('')}
         </div>
-        <button class="btn-primary" ${!ci.state ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
-        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
-      </div>
-    `;
-  } else if (ci.step === 5) {
-    const entryScore = calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes });
-    const summary = `[${ci.session}] Observerede: ${ci.obs.join(', ')}. Reaktion: ${ci.responses.join(', ')}. Udfald: ${ci.outcomes.join(', ')}. Initiativ: ${ci.initiatives.join(', ')||'–'}. Tilstand: ${ci.state}.`;
-    _stikordCtx = summary;
-    body = `
-      <div class="card">
-        <div style="text-align:center; margin-bottom:16px;">
-          <div style="font-size:36px; font-weight:800; color:${scoreColor(entryScore)};">${entryScore > 0 ? '+' : ''}${entryScore}</div>
-          <div style="font-size:13px; color:var(--muted); margin-top:4px;">Score for dette check-in</div>
+        <div style="text-align:center; margin:8px 0 16px;">
+          <div style="font-size:32px; font-weight:800; color:${scoreColor(calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes }))};">${calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes }) > 0 ? '+' : ''}${calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes })}</div>
+          <div style="font-size:13px; color:var(--muted); margin-top:2px;">Score for dette check-in</div>
         </div>
-        <div class="card-title">Refleksion</div>
-        <div class="card-sub">Valgfri — skriv hvad du vil dele med din GPT-coach</div>
-        <textarea id="ciNote" placeholder="Hvad vil du tilføje?..." rows="4"></textarea>
-        ${stikordHtml('ciNote')}
-        <button id="ciGptBtn" onclick="openGPT(document.getElementById('ciNote').value)" class="gpt-btn" style="margin-top:12px;width:100%;text-align:left;">
-          <span class="gpt-icon">🤖</span>
-          <div><div>Del med GPT</div><div class="gpt-sub">Kopierer tekst og åbner ChatGPT</div></div>
-        </button>
-        <button class="btn-primary" onclick="saveCiEntry()">💾 Gem check-in</button>
+        <button class="btn-primary" ${!ci.state ? 'disabled' : ''} onclick="saveCiEntry()">💾 Gem check-in</button>
         <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
       </div>
     `;
