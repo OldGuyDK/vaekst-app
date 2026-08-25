@@ -26,7 +26,7 @@
       min-height: 100vh; max-width: 480px; margin: 0 auto; overflow-x: hidden;
     }
 
-    .view { display: none; padding: 140px 16px 90px; min-height: 100vh; animation: fadeIn 0.2s ease; }
+    .view { display: none; padding: 200px 16px 90px; min-height: 100vh; animation: fadeIn 0.2s ease; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes overdueFlash { 0%,100% { border-color: rgba(239,68,68,0.4); } 50% { border-color: rgba(239,68,68,1); } }
@@ -290,12 +290,13 @@
     /* FAB BAR */
     .fab-bar {
       position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center;
+      display: flex; flex-direction: column; align-items: stretch;
       width: 100%; max-width: 480px;
-      background: #000; padding: 54px 16px 8px; gap: 8px;
+      background: #000; padding: 16px 16px 14px; gap: 8px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.6);
       z-index: 200;
     }
+    .fab-row { display: flex; align-items: center; gap: 8px; width: 100%; }
     .fab {
       flex: 1; border-radius: 50px;
       color: #fff; border: none;
@@ -306,6 +307,14 @@
     }
     .fab span.fab-label { font-size: 12px; letter-spacing: 0.3px; opacity: 0.9; }
     .fab:active { transform: scale(0.93); opacity: 0.8; }
+    .fab-wide {
+      width: 100%; border-radius: 14px; border: none;
+      background: #6366f1; color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; padding: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+    .fab-wide:active { transform: scale(0.97); opacity: 0.85; }
 
     /* IMPULS OVERLAY */
     .impuls-overlay {
@@ -504,13 +513,25 @@
   </div>
 </div>
 
+<!-- MØNSTER OVERLAY -->
+<div class="panic-overlay" id="moensterOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:#6366f1;">🔍 Genkender du mønster?</div>
+    <button class="close-x" onclick="closeMoenster()">✕</button>
+  </div>
+  <div id="moensterContent"></div>
+</div>
+
 <!-- FAB BAR -->
 <div class="fab-bar">
-  <div style="position:absolute;top:14px;left:0;right:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
-  <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
-  <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
-  <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
-  <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
+  <div style="position:relative;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
+  <div class="fab-row">
+    <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
+    <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
+    <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
+    <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
+  </div>
+  <button class="fab-wide" onclick="openMoenster()">🔍 Genkender du mønster?</button>
 </div>
 
 <!-- EXPIRED REMINDERS MODAL -->
@@ -548,6 +569,7 @@
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
   <div id="homeMotivationCard"></div>
+  <div id="homeBrydeCard"></div>
   <div class="card" id="homeStopCard"></div>
   <div id="homeScore"></div>
 </div>
@@ -614,7 +636,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v32';
+const APP_VERSION = 'v33';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -998,6 +1020,7 @@ function renderHome() {
   `;
 
   renderMotivationCard();
+  renderBrydeCard();
 
   const sc = getStopCounts();
   const ac = getAdfaerdCounts();
@@ -1076,6 +1099,14 @@ function renderHome() {
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
         <span style="font-size:13px;font-weight:600;">💬 Lagde ord i munden</span>
         <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lagdeOrdIMunden.d}${sep}${ac.lagdeOrdIMunden.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">😟 Usikkerhed holdt mig tilbage</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.usikkerhedTilbage.d}${sep}${ac.usikkerhedTilbage.w}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">🔁 Usikkerhed gentog gammelt mønster</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.usikkerhedGentog.d}${sep}${ac.usikkerhedGentog.w}</span>
       </div>
     </div>
     </div>
@@ -2706,6 +2737,8 @@ const ADFAERD_TYPES = [
   { type: 'grebIkke',    score: -40, label: '🫥 Greb hende ikke der hvor hun var (mentalt)',                                        scoreLabel: '−40 point',    rgb: '239,68,68' },
   { type: 'ikkeForKant', score: -20, label: '📅 Var ikke på forkant, med noget der var planlagt',                                   scoreLabel: '−20 point',    rgb: '239,68,68' },
   { type: 'lagdeOrdIMunden', score: -20, label: '💬 Lagde ord i munden',                                                            scoreLabel: '−20 point',    rgb: '239,68,68' },
+  { type: 'usikkerhedTilbage', score: -20, label: '😟 Usikkerhed holdt mig tilbage',                                                 scoreLabel: '−20 point',    rgb: '239,68,68' },
+  { type: 'usikkerhedGentog', score: -30, label: '🔁 Usikkerhed fik mig til at gentage gammelt mønster',                              scoreLabel: '−30 point',    rgb: '239,68,68' },
 ];
 
 let _adfaerdSession = {};
@@ -2716,6 +2749,97 @@ function openAdfaerd() {
   renderAdfaerdBtns();
 }
 function closeAdfaerd() { document.getElementById('adfaerdOverlay').classList.remove('show'); }
+
+// ---- MØNSTER ----
+const MOENSTER_ITEMS = [
+  'Jeg var ved at overtage hendes udspil',
+  'Jeg skyndte mig at undskylde/forklare',
+  'Jeg startede med hvad jeg havde brug for',
+  'Jeg spurgte ikke ind til hvad hun havde brug for',
+  'Jeg gik i gang - uden at spørge hvordan jeg skulle hjælpe',
+  'Jeg havde sagt jeg ville tage mig af noget, men ikke hvornår og hvordan',
+  'Hun var sårbar - men jeg tog over med mit indre barn',
+  'Jeg var slet ikke på forkant med vigtig begivenhed',
+  'Hun havde lige givet, og jeg tog uden omtanke',
+];
+
+let _moensterAnswer = null;
+let _moensterChecked = [];
+
+function openMoenster() {
+  _moensterAnswer = null;
+  _moensterChecked = [];
+  document.getElementById('moensterOverlay').classList.add('show');
+  renderMoenster();
+}
+function closeMoenster() { document.getElementById('moensterOverlay').classList.remove('show'); }
+
+function setMoensterAnswer(v) {
+  _moensterAnswer = v;
+  renderMoenster();
+}
+
+function toggleMoensterItem(i) {
+  const idx = _moensterChecked.indexOf(i);
+  if (idx > -1) _moensterChecked.splice(idx, 1); else _moensterChecked.push(i);
+  renderMoenster();
+}
+
+function renderMoenster() {
+  const c = document.getElementById('moensterContent');
+
+  if (_moensterAnswer === null) {
+    c.innerHTML = `
+      <div class="card">
+        <div class="card-title" style="font-size:20px;line-height:1.3;">Genkender du mønster?</div>
+        <div style="display:flex;gap:10px;margin-top:6px;">
+          <button class="yn-btn yes" onclick="setMoensterAnswer('ja')" style="flex:1;">Ja</button>
+          <button class="yn-btn no" onclick="setMoensterAnswer('nej')" style="flex:1;">Nej</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (_moensterAnswer === 'nej') {
+    c.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <div style="font-size:40px;margin-bottom:10px;">🤔</div>
+        <div class="card-title">Tænk dig godt om</div>
+        <button class="btn-secondary" onclick="setMoensterAnswer(null)">← Tilbage</button>
+      </div>
+    `;
+    return;
+  }
+
+  const itemsHtml = MOENSTER_ITEMS.map((label, i) => {
+    const on = _moensterChecked.includes(i);
+    return `<div class="dropdown-opt ${on ? 'on' : ''}" onclick="toggleMoensterItem(${i})" style="border-radius:10px;margin-bottom:6px;">
+      <div class="dropdown-opt-circle">${on ? '✓' : ''}</div>
+      <div>${label}</div>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-title">Hvad genkender du?</div>
+      <div class="card-sub">Sæt flueben ved det der passer</div>
+      ${itemsHtml}
+    </div>
+    ${_moensterChecked.length ? `
+      <div class="card" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35);">
+        <div style="font-size:15px;line-height:1.6;">
+          <strong>Godt, nu har du genkendt mønster.</strong><br>
+          Vent til hun er tilgængelig, start med at spørge hvad der ramte hende.
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-top:10px;line-height:1.5;">
+          Nævn bagefter selv at du blev opmærksom på mønsteret — og gerne hvad du vil gøre for at undgå det igen.
+        </div>
+      </div>
+    ` : ''}
+    <button class="btn-secondary" onclick="setMoensterAnswer(null)">← Tilbage</button>
+  `;
+}
 
 function renderAdfaerdBtns() {
   document.getElementById('adfaerdBtns').innerHTML = ADFAERD_TYPES.map(t => {
@@ -2761,6 +2885,8 @@ function getAdfaerdCounts() {
     grebIkke:     { d: count('grebIkke','d'),     w: count('grebIkke','w') },
     ikkeForKant:  { d: count('ikkeForKant','d'),  w: count('ikkeForKant','w') },
     lagdeOrdIMunden: { d: count('lagdeOrdIMunden','d'), w: count('lagdeOrdIMunden','w') },
+    usikkerhedTilbage: { d: count('usikkerhedTilbage','d'), w: count('usikkerhedTilbage','w') },
+    usikkerhedGentog: { d: count('usikkerhedGentog','d'), w: count('usikkerhedGentog','w') },
   };
 }
 
@@ -2935,6 +3061,95 @@ function renderMotivationCard() {
       <div class="dropdown-list" id="motivMod">${optionBtns('mod', MOD_OPTIONS)}</div>
     </div>
   `;
+}
+
+// ---- BRYDE TILSTAND ----
+function _getBryde() {
+  const d = getData();
+  if (!d.bryde) d.bryde = { active: null, log: [] };
+  return d.bryde;
+}
+function _saveBryde(b) { const d = getData(); d.bryde = b; setData(d); }
+
+function startBryde() {
+  const b = _getBryde();
+  if (b.active) return;
+  b.active = { startTs: Date.now() };
+  _saveBryde(b);
+  renderHome();
+}
+
+function stopBryde() {
+  const b = _getBryde();
+  if (!b.active) return;
+  const endTs = Date.now();
+  const minutes = (endTs - b.active.startTs) / 60000;
+  b.log.push({ id: Date.now(), date: todayKey(), week: getWeekKey(), startTs: b.active.startTs, endTs, minutes });
+  b.active = null;
+  _saveBryde(b);
+  clearInterval(_brydeInterval);
+  showToast(`🌀 Bryde tilstand stoppet · ${formatBrydeDuration(minutes)}`);
+  renderHome();
+}
+
+function getBrydeWeekStats() {
+  const b = _getBryde();
+  const week = getWeekKey();
+  const entries = b.log.filter(e => e.week === week);
+  const count = entries.length;
+  const avgMinutes = count ? entries.reduce((s, e) => s + e.minutes, 0) / count : 0;
+  return { count, avgMinutes };
+}
+
+function formatBrydeDuration(minutes) {
+  if (minutes < 1) return Math.round(minutes * 60) + ' sek';
+  if (minutes < 60) return (Math.round(minutes * 10) / 10) + ' min';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `${h}t ${m}m`;
+}
+
+function _brydeFormatElapsed(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+let _brydeInterval = null;
+function _startBrydeTicker() {
+  clearInterval(_brydeInterval);
+  _brydeInterval = setInterval(() => {
+    const el = document.getElementById('brydeTimerDisplay');
+    const b = _getBryde();
+    if (!el || !b.active) { clearInterval(_brydeInterval); return; }
+    el.textContent = _brydeFormatElapsed(Math.floor((Date.now() - b.active.startTs) / 1000));
+  }, 1000);
+}
+
+function renderBrydeCard() {
+  const b = _getBryde();
+  const stats = getBrydeWeekStats();
+  const active = b.active;
+  document.getElementById('homeBrydeCard').innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${active ? '16' : '6'}px;">
+        <div class="card-title" style="margin-bottom:0;">🌀 Bryde tilstand</div>
+        <div style="font-size:12px;color:var(--muted);text-align:right;">${stats.count}× denne uge${stats.count ? ` · snit ${formatBrydeDuration(stats.avgMinutes)}` : ''}</div>
+      </div>
+      ${active ? `
+        <div style="text-align:center;padding:16px 0;">
+          <div id="brydeTimerDisplay" style="font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--primary);margin-bottom:14px;">${_brydeFormatElapsed(Math.floor((Date.now() - active.startTs) / 1000))}</div>
+          <button onclick="stopBryde()" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">⏹ Stop</button>
+        </div>
+      ` : `
+        <div class="card-sub" style="margin-bottom:12px;">Start når du mærker trangen til overspringshandling, offerrolle eller lignende — stop når du er igennem.</div>
+        <button onclick="startBryde()" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--green);color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">▶️ Start</button>
+      `}
+    </div>
+  `;
+  if (active) _startBrydeTicker();
 }
 
 // ---- NOTIFIKATIONER ----
