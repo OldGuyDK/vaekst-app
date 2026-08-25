@@ -26,7 +26,7 @@
       min-height: 100vh; max-width: 480px; margin: 0 auto; overflow-x: hidden;
     }
 
-    .view { display: none; padding: 200px 16px 90px; min-height: 100vh; animation: fadeIn 0.2s ease; }
+    .view { display: none; padding: 140px 16px 90px; min-height: 100vh; animation: fadeIn 0.2s ease; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes overdueFlash { 0%,100% { border-color: rgba(239,68,68,0.4); } 50% { border-color: rgba(239,68,68,1); } }
@@ -290,13 +290,12 @@
     /* FAB BAR */
     .fab-bar {
       position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-      display: flex; flex-direction: column; align-items: stretch;
+      display: flex; align-items: center;
       width: 100%; max-width: 480px;
-      background: #000; padding: 16px 16px 14px; gap: 8px;
+      background: #000; padding: 54px 16px 8px; gap: 8px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.6);
       z-index: 200;
     }
-    .fab-row { display: flex; align-items: center; gap: 8px; width: 100%; }
     .fab {
       flex: 1; border-radius: 50px;
       color: #fff; border: none;
@@ -384,6 +383,8 @@
     <div class="panic-heading">🆘 Panik-mode</div>
     <button class="close-x" onclick="closePanic()">✕</button>
   </div>
+
+  <button class="fab-wide" style="margin-bottom:16px;" onclick="closePanic(); openMoenster();">🔍 Genkender du mønster?</button>
 
   <div id="pFact">
     <div class="card">
@@ -524,14 +525,11 @@
 
 <!-- FAB BAR -->
 <div class="fab-bar">
-  <div style="position:relative;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
-  <div class="fab-row">
-    <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
-    <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
-    <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
-    <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
-  </div>
-  <button class="fab-wide" onclick="openMoenster()">🔍 Genkender du mønster?</button>
+  <div style="position:absolute;top:14px;left:0;right:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
+  <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
+  <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
+  <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
+  <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
 </div>
 
 <!-- EXPIRED REMINDERS MODAL -->
@@ -636,7 +634,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v33';
+const APP_VERSION = 'v34';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
