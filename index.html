@@ -527,8 +527,8 @@
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-btn active" id="nb-home" onclick="goTo('home')"><span class="nav-icon">🏠</span><span>Hjem</span></button>
-  <button class="nav-btn" id="nb-checkin" onclick="goTo('checkin')"><span class="nav-icon">✏️</span><span>Check-in</span></button>
-  <button class="nav-btn" id="nb-daily" onclick="goTo('daily')"><span class="nav-icon">📊</span><span>Dagsoversigt</span></button>
+  <button class="nav-btn" id="nb-checkin" onclick="goTo('checkin')" style="display:none;"><span class="nav-icon">✏️</span><span>Check-in</span></button>
+  <button class="nav-btn" id="nb-daily" onclick="goTo('daily')" style="display:none;"><span class="nav-icon">📊</span><span>Dagsoversigt</span></button>
   <button class="nav-btn" id="nb-history" onclick="goTo('history')"><span class="nav-icon">📅</span><span>Historik</span></button>
 </nav>
 
@@ -540,13 +540,14 @@
   </div>
   <div id="homeUrgentCard" style="display:none;"></div>
   <div class="card" id="homeKlarCard"></div>
-  <div class="card" id="homeSessionCard"></div>
+  <div class="card" id="homeSessionCard" style="display:none;"></div>
   <div class="card" id="homeRemindersCard"></div>
-  <div class="card" id="homeDailyCard">
+  <div class="card" id="homeDailyCard" style="display:none;">
     <div class="card-title">Dagsoversigt</div>
     <div id="homeDailyContent"></div>
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
+  <div id="homeMotivationCard"></div>
   <div class="card" id="homeStopCard"></div>
   <div id="homeScore"></div>
 </div>
@@ -613,7 +614,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v32';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -623,6 +624,39 @@ function openGPT(text) {
 
 const SESSIONS = ['Morgen','Formiddag','Eftermiddag','Aften','Før sengetid'];
 const S_ICONS  = ['🌅','☀️','🌤️','🌆','🌙'];
+
+// ---- MOTIVATION: Handlekraft / Modstandskraft / Troværdighed / Mod ----
+const MOTIV_ACTIVITIES = [
+  { key: 'yoga',      label: 'Yoga' },
+  { key: 'chant',     label: 'Chant' },
+  { key: 'traening',  label: 'Træning' },
+  { key: 'opkald',    label: 'Opkald' },
+  { key: 'aftaler',   label: 'Personlige aftaler', hasNote: true },
+];
+
+const MODSTAND_OPTIONS = [
+  { key: 'stopUdenNaevnt',      label: 'Standsede impuls uden at have nævnt den',                    points: 20 },
+  { key: 'stopEfterNaevnt',     label: 'Standsede impuls, efter jeg havde nævnt den',                 points: 10 },
+  { key: 'stopIkke',            label: 'Standsede ikke impuls',                                       points: -20 },
+  { key: 'erkendteTraadtForkert', label: 'Erkendte jeg havde trådt forkert',                          points: 20 },
+  { key: 'gikIForsvar',         label: 'Gik i forsvar',                                               points: -20 },
+  { key: 'undskyldteOverfladisk', label: 'Undskyldte uden at gå dybere',                              points: -30 },
+  { key: 'stopUansvarlig',      label: 'Standsede uansvarlig adfærd, med noget jeg havde kraftigt lyst til', points: 30 },
+  { key: 'undlodOverspring',    label: 'Undlod overspringshandlinger',                                points: 10 },
+];
+
+// Ingen pointværdier angivet for Troværdighed/Mod — sat til +20 som udgangspunkt, kan justeres i denne liste.
+const TROV_OPTIONS = [
+  { key: 'overholdtAftale', label: 'Overholdt aftale',                    points: 20 },
+  { key: 'naaedeDagensMaal', label: 'Nåede dagens mål',                   points: 20 },
+  { key: 'omsorgAnsvar',    label: 'Udviste omsorg og ansvarlighed',      points: 20 },
+];
+
+const MOD_OPTIONS = [
+  { key: 'foelsomtEmne',    label: 'Tog selv hul på et følsomt emne',                                          points: 20 },
+  { key: 'overvandtFrygt',  label: 'Overvandt min frygt og rykkede på noget der var vigtigt',                  points: 20 },
+  { key: 'foreslogGavn',    label: 'Foreslog noget til gavn for andre, uden for egen komfortzone',              points: 20 },
+];
 
 const OBSERVATIONS = [
   'Lukket','Fjern','Overskud','Kommunikerende','Åben',
@@ -963,29 +997,26 @@ function renderHome() {
     </div>
   `;
 
+  renderMotivationCard();
 
   const sc = getStopCounts();
   const ac = getAdfaerdCounts();
   const oc = getOmsorgCounts();
+  const adfScore = getAdfaerdScore();
   const sep = `<span style="color:var(--muted);font-size:14px;font-weight:400;"> – </span>`;
   document.getElementById('homeStopCard').innerHTML = `
-    <div class="card-title">💪 Impuls og adfærdskontrol</div>
-    <div style="font-size:11px;color:var(--muted);text-align:right;margin-bottom:6px;">dag &nbsp;–&nbsp; uge</div>
+    <button class="dropdown-toggle" onclick="toggleDropdown('adfaerdDropdown')" style="width:100%;">
+      <span style="font-weight:700;">💪 Adfærdskontrol</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span style="font-weight:800;color:${scoreColor(adfScore)};font-size:14px;">${adfScore > 0 ? '+' : ''}${adfScore}</span>
+        <span>▾</span>
+      </span>
+    </button>
+    <div class="dropdown-list" id="adfaerdDropdown">
+    <div style="font-size:11px;color:var(--muted);text-align:right;margin:10px 0 6px;">dag &nbsp;–&nbsp; uge</div>
 
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">IMPULSER</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-      <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">✋ Standsede</div>
-        <div style="font-size:22px;font-weight:800;color:var(--green);">${sc.todayStopped}${sep}${sc.weekStopped}</div>
-      </div>
-      <div style="text-align:center;padding:10px 6px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">➡️ Nåede ikke</div>
-        <div style="font-size:22px;font-weight:800;color:var(--red);">${sc.todayNotStopped}${sep}${sc.weekNotStopped}</div>
-      </div>
-    </div>
-
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">OMSORG</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;padding:0 4px;">OMSORG</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;padding:0 4px;">
       <div style="text-align:center;padding:10px 6px;background:rgba(59,130,246,0.08);border-radius:12px;border:1px solid rgba(59,130,246,0.2);">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">🤝 Modtog</div>
         <div style="font-size:22px;font-weight:800;color:var(--primary);">${oc.modtog.d}${sep}${oc.modtog.w}</div>
@@ -996,8 +1027,8 @@ function renderHome() {
       </div>
     </div>
 
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;">ADFÆRD</div>
-    <div style="display:flex;flex-direction:column;gap:6px;">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;padding:0 4px;">ADFÆRD</div>
+    <div style="display:flex;flex-direction:column;gap:6px;padding:0 4px 12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:10px;">
         <span style="font-size:13px;font-weight:600;">🟢 Nærværende</span>
         <span style="font-size:16px;font-weight:800;color:var(--green);">${ac.naervaerende.d}${sep}${ac.naervaerende.w}</span>
@@ -1042,6 +1073,11 @@ function renderHome() {
         <span style="font-size:13px;font-weight:600;">📅 Var ikke på forkant</span>
         <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.ikkeForKant.d}${sep}${ac.ikkeForKant.w}</span>
       </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
+        <span style="font-size:13px;font-weight:600;">💬 Lagde ord i munden</span>
+        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lagdeOrdIMunden.d}${sep}${ac.lagdeOrdIMunden.w}</span>
+      </div>
+    </div>
     </div>
   `;
 
@@ -2669,6 +2705,7 @@ const ADFAERD_TYPES = [
   { type: 'lukket',       score: -30, label: '🔴 Lukkede ned i samtale',                                                        scoreLabel: '−30 point',    rgb: '239,68,68' },
   { type: 'grebIkke',    score: -40, label: '🫥 Greb hende ikke der hvor hun var (mentalt)',                                        scoreLabel: '−40 point',    rgb: '239,68,68' },
   { type: 'ikkeForKant', score: -20, label: '📅 Var ikke på forkant, med noget der var planlagt',                                   scoreLabel: '−20 point',    rgb: '239,68,68' },
+  { type: 'lagdeOrdIMunden', score: -20, label: '💬 Lagde ord i munden',                                                            scoreLabel: '−20 point',    rgb: '239,68,68' },
 ];
 
 let _adfaerdSession = {};
@@ -2723,6 +2760,7 @@ function getAdfaerdCounts() {
     forHurtigt:   { d: count('forHurtigt','d'),   w: count('forHurtigt','w') },
     grebIkke:     { d: count('grebIkke','d'),     w: count('grebIkke','w') },
     ikkeForKant:  { d: count('ikkeForKant','d'),  w: count('ikkeForKant','w') },
+    lagdeOrdIMunden: { d: count('lagdeOrdIMunden','d'), w: count('lagdeOrdIMunden','w') },
   };
 }
 
@@ -2749,6 +2787,154 @@ function getStopCounts() {
     weekStopped:     stops.filter(s => s.week === week  &&  s.stopped).length,
     weekNotStopped:  stops.filter(s => s.week === week  && !s.stopped).length,
   };
+}
+
+// ---- MOTIVATION: Handlekraft / Modstandskraft / Troværdighed / Mod ----
+function _getMotiv() {
+  const d = getData();
+  if (!d.motiv) d.motiv = { targets: {}, log: [] };
+  MOTIV_ACTIVITIES.forEach(a => { if (d.motiv.targets[a.key] === undefined) d.motiv.targets[a.key] = 3; });
+  return d.motiv;
+}
+function _saveMotiv(m) { const d = getData(); d.motiv = m; setData(d); }
+
+function setMotivTarget(key, value) {
+  const m = _getMotiv();
+  m.targets[key] = Math.max(0, parseInt(value, 10) || 0);
+  _saveMotiv(m);
+  renderHome();
+  const dd = document.getElementById('motivHandlekraft');
+  if (dd) dd.classList.add('open');
+}
+
+let _motivActivity = null;
+
+function selectMotivActivity(key) {
+  _motivActivity = key;
+  renderHome();
+  const dd = document.getElementById('motivHandlekraft');
+  if (dd) dd.classList.add('open');
+}
+
+function recordHandlekraft(outcome) {
+  const key = _motivActivity || MOTIV_ACTIVITIES[0].key;
+  const act = MOTIV_ACTIVITIES.find(a => a.key === key);
+  const noteEl = document.getElementById('motivNote');
+  const note = (act.hasNote && noteEl) ? noteEl.value.trim() : '';
+  const points = outcome === 'udfoert' ? 10 : -20;
+  const m = _getMotiv();
+  m.log.push({ id: Date.now(), area: 'handlekraft', date: todayKey(), week: getWeekKey(), activity: act.key, label: act.label, outcome, note, points, ts: Date.now() });
+  _saveMotiv(m);
+  showToast(`${outcome === 'udfoert' ? '✅' : '❌'} ${act.label} ${outcome === 'udfoert' ? 'udført' : 'droppet'} · ${points > 0 ? '+' : ''}${points} point`);
+  renderHome();
+  const dd = document.getElementById('motivHandlekraft');
+  if (dd) dd.classList.add('open');
+}
+
+function recordMotivOption(area, key) {
+  const options = area === 'modstandskraft' ? MODSTAND_OPTIONS : area === 'trovaerdighed' ? TROV_OPTIONS : MOD_OPTIONS;
+  const opt = options.find(o => o.key === key);
+  const m = _getMotiv();
+  m.log.push({ id: Date.now(), area, date: todayKey(), week: getWeekKey(), key: opt.key, label: opt.label, points: opt.points, ts: Date.now() });
+  _saveMotiv(m);
+  showToast(`${opt.points > 0 ? '+' : ''}${opt.points} point`);
+  renderHome();
+  const ddId = area === 'modstandskraft' ? 'motivModstand' : area === 'trovaerdighed' ? 'motivTrov' : 'motivMod';
+  const dd = document.getElementById(ddId);
+  if (dd) dd.classList.add('open');
+}
+
+function getMotivWeekScore(area) {
+  const m = _getMotiv();
+  const week = getWeekKey();
+  return m.log.filter(e => e.area === area && e.week === week).reduce((s, e) => s + e.points, 0);
+}
+
+function getMotivActivityWeekCounts(key) {
+  const m = _getMotiv();
+  const week = getWeekKey();
+  const entries = m.log.filter(e => e.area === 'handlekraft' && e.activity === key && e.week === week);
+  return { done: entries.filter(e => e.outcome === 'udfoert').length, dropped: entries.filter(e => e.outcome === 'droppet').length };
+}
+
+function renderMotivationCard() {
+  const m = _getMotiv();
+  const activity = _motivActivity || MOTIV_ACTIVITIES[0].key;
+  const act = MOTIV_ACTIVITIES.find(a => a.key === activity);
+
+  const scores = {
+    handlekraft: getMotivWeekScore('handlekraft'),
+    modstandskraft: getMotivWeekScore('modstandskraft'),
+    trovaerdighed: getMotivWeekScore('trovaerdighed'),
+    mod: getMotivWeekScore('mod'),
+  };
+
+  const toggleHeader = (id, icon, title, score) => `
+    <button class="dropdown-toggle" onclick="toggleDropdown('${id}')" style="width:100%;">
+      <span style="font-weight:700;">${icon} ${title}</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span style="font-weight:800;color:${scoreColor(score)};font-size:14px;">${score > 0 ? '+' : ''}${score}</span>
+        <span>▾</span>
+      </span>
+    </button>`;
+
+  const optionBtns = (area, options) => `<div style="padding:12px 4px 4px;">` + options.map(o => `
+    <button onclick="recordMotivOption('${area}','${o.key}')" style="display:block;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:2px solid ${o.points > 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'};background:${o.points > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'};color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px;">
+      ${o.label} &nbsp;<span style="font-weight:800;color:${o.points > 0 ? 'var(--green)' : 'var(--red)'};">${o.points > 0 ? '+' : ''}${o.points}</span>
+    </button>`).join('') + `</div>`;
+
+  document.getElementById('homeMotivationCard').innerHTML = `
+    <div class="card">
+      ${toggleHeader('motivHandlekraft', '🎯', 'Handlekraft – mål', scores.handlekraft)}
+      <div class="dropdown-list" id="motivHandlekraft">
+        <div style="padding:12px 4px 4px;">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+            ${MOTIV_ACTIVITIES.map(a => {
+              const c = getMotivActivityWeekCounts(a.key);
+              const target = m.targets[a.key];
+              const pct = target > 0 ? Math.min(100, Math.round(c.done / target * 100)) : 0;
+              return `
+              <div style="padding:10px 12px;border-radius:10px;background:var(--card2);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <span style="font-size:14px;font-weight:600;">${a.label}</span>
+                  <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
+                    ${c.done}/<input type="number" min="0" value="${target}" onchange="setMotivTarget('${a.key}',this.value)" style="width:36px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;text-align:center;">
+                    ${c.dropped ? `<span style="color:var(--red);">· ${c.dropped} droppet</span>` : ''}
+                  </span>
+                </div>
+                <div style="height:6px;border-radius:4px;background:var(--border);overflow:hidden;">
+                  <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--primary)'};"></div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <select id="motivActivitySelect" onchange="selectMotivActivity(this.value)" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;margin-bottom:8px;">
+            ${MOTIV_ACTIVITIES.map(a => `<option value="${a.key}" ${a.key===activity?'selected':''}>${a.label}</option>`).join('')}
+          </select>
+          ${act.hasNote ? `<input id="motivNote" type="text" placeholder="Stikord..." style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;margin-bottom:8px;">` : ''}
+          <div style="display:flex;gap:8px;">
+            <button onclick="recordHandlekraft('udfoert')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">✅ Udført <span style="font-weight:400;">+10</span></button>
+            <button onclick="recordHandlekraft('droppet')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--red);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">❌ Droppet <span style="font-weight:400;">−20</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      ${toggleHeader('motivModstand', '🛡️', 'Modstandskraft', scores.modstandskraft)}
+      <div class="dropdown-list" id="motivModstand">${optionBtns('modstandskraft', MODSTAND_OPTIONS)}</div>
+    </div>
+
+    <div class="card">
+      ${toggleHeader('motivTrov', '🤝', 'Troværdighed', scores.trovaerdighed)}
+      <div class="dropdown-list" id="motivTrov">${optionBtns('trovaerdighed', TROV_OPTIONS)}</div>
+    </div>
+
+    <div class="card">
+      ${toggleHeader('motivMod', '🦁', 'Mod', scores.mod)}
+      <div class="dropdown-list" id="motivMod">${optionBtns('mod', MOD_OPTIONS)}</div>
+    </div>
+  `;
 }
 
 // ---- NOTIFIKATIONER ----
