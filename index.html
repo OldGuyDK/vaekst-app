@@ -387,15 +387,6 @@
   <button onclick="doAppUpdate()" style="background:var(--green);color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Opdater nu</button>
 </div>
 
-<!-- KLAR TIL CHECK-IN OVERLAY -->
-<div class="panic-overlay" id="readyCheckOverlay">
-  <div class="panic-top">
-    <div class="panic-heading" style="color:var(--primary);">🧭 Klar til at checke ind?</div>
-    <button class="close-x" onclick="closeReadyCheck()">✕</button>
-  </div>
-  <div id="readyCheckContent"></div>
-</div>
-
 <!-- PANIC OVERLAY -->
 <div class="panic-overlay" id="panicOverlay">
   <div class="panic-top">
@@ -525,19 +516,6 @@
   </div>
 </div>
 
-<!-- ADFÆRD OVERLAY -->
-<div class="panic-overlay" id="adfaerdOverlay">
-  <div class="panic-top">
-    <div class="panic-heading" style="color:var(--green);">🎯 Adfærd</div>
-    <button class="close-x" onclick="closeAdfaerd()">✕</button>
-  </div>
-  <div class="card">
-    <div class="card-title">Registrér adfærd</div>
-    <div class="card-sub">Klik for at registrere — klik igen for at fortryde</div>
-    <div id="adfaerdBtns" style="display:flex;flex-direction:column;gap:10px;"></div>
-  </div>
-</div>
-
 <!-- MØNSTER OVERLAY -->
 <div class="panic-overlay" id="moensterOverlay">
   <div class="panic-top">
@@ -565,7 +543,7 @@
 <nav class="bottom-nav">
   <button class="nav-btn active" id="nb-home" onclick="goTo('home')"><span class="nav-icon">⚡</span><span>Nu</span></button>
   <button class="nav-btn" id="nb-registrer" onclick="goTo('registrer')"><span class="nav-icon">✍️</span><span>Registrér</span></button>
-  <button class="nav-btn" id="nb-history" onclick="goTo('history')"><span class="nav-icon">📅</span><span>Historik</span></button>
+  <button class="nav-btn" id="nb-overblik" onclick="goTo('overblik')"><span class="nav-icon">📊</span><span>Overblik</span></button>
 </nav>
 
 <!-- HOME -->
@@ -592,14 +570,6 @@
   <div class="section-label">HVER MORGEN</div>
   <div class="card" id="homeKlarCard"></div>
   <div class="card" id="homeRemindersCard"></div>
-
-  <div class="card" id="homeSessionCard" style="display:none;"></div>
-  <div class="card" id="homeDailyCard" style="display:none;">
-    <div class="card-title">Dagsoversigt</div>
-    <div id="homeDailyContent"></div>
-    <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
-  </div>
-  <div id="homeScore"></div>
 </div>
 
 <!-- REGISTRÉR -->
@@ -611,36 +581,13 @@
   <div id="registrerContent"></div>
 </div>
 
-<!-- CHECK-IN -->
-<div class="view" id="view-checkin">
+<!-- OVERBLIK -->
+<div class="view" id="view-overblik">
   <div class="page-header">
-    <h1>Check-in</h1>
-    <p>Vælg et tidspunkt</p>
+    <h1>Overblik</h1>
+    <p>Dag og uge</p>
   </div>
-  <div id="ciContent"></div>
-</div>
-
-<!-- DAILY -->
-<div class="view" id="view-daily">
-  <div class="page-header">
-    <h1>Dagsoversigt</h1>
-    <p>Hvordan gik dagen?</p>
-  </div>
-  <div class="card">
-    <div class="card-title">Min generelle tilstand</div>
-    <div class="card-sub">Vælg alt der passer — sammen med partneren i dag</div>
-    <div class="chip-grid" id="myDailyGrid"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Hendes generelle tilstand</div>
-    <div class="card-sub">Vælg alt der passer — sådan oplevede du hende</div>
-    <div class="chip-grid" id="herDailyGrid"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Planlægning</div>
-    <div id="planningChecks"></div>
-  </div>
-  <button class="btn-primary" onclick="saveDailyAction()">💾 Gem dagsoversigt</button>
+  <div id="overblikContent"></div>
 </div>
 
 <!-- HISTORY -->
@@ -673,16 +620,13 @@
 </div>
 
 <script>
-const APP_VERSION = 'v42';
+const APP_VERSION = 'v43';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
     showToast('📋 Tekst kopieret');
   }
 }
-
-const SESSIONS = ['Morgen','Formiddag','Eftermiddag','Aften','Før sengetid'];
-const S_ICONS  = ['🌅','☀️','🌤️','🌆','🌙'];
 
 // ---- MOTIVATION: Handlekraft / Modstandskraft / Troværdighed / Mod ----
 const MOTIV_ACTIVITIES = [
@@ -717,74 +661,6 @@ const MOD_OPTIONS = [
   { key: 'foreslogGavn',    label: 'Foreslog noget til gavn for andre, uden for egen komfortzone',              points: 20 },
 ];
 
-const OBSERVATIONS = [
-  'Lukket','Fjern','Overskud','Kommunikerende','Åben',
-  'Øjenkontakt','Imødekommende','Hård stemmeføring','Let stemmeføring','Glad',
-  'Stille','Blid','Vred','Såret','Sårbar','Ked af det','Frustreret','Belastet fysisk'
-];
-
-// Responses with scores
-const RESPONSES = [
-  { label: 'Italesatte observationen', score: +10 },
-  { label: 'Nærværende Aktiv',         score: +10 },
-  { label: 'Nærværende',              score: +10 },
-  { label: 'Lyttende',                score: +10 },
-  { label: 'Blev afventende',          score: -10 },
-  { label: 'Trak mig',                 score: -10 },
-  { label: 'Gik i forsvar',            score: -10 },
-  { label: 'Forklarede',               score: -10 },
-];
-
-// Outcomes with scores
-const OUTCOMES = [
-  { label: 'Landede godt',    score: +10 },
-  { label: 'Landede roligt',  score: +10 },
-  { label: 'Følte sig mødt',  score: +10 },
-  { label: 'Følte sig ikke mødt', score: -20 },
-  { label: 'Endte i konflikt',   score: -20 },
-  { label: 'Endte i tavshed',    score: -20 },
-];
-
-// Initiative (tracking only, no score)
-const INITIATIVES = [
-  { label: 'Du har nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!' },
-  { label: 'Du var der for mig tidligere i dag, jeg er i stand til at være der for dig nu?' },
-  { label: 'Jeg vil gerne gengælde den omsorg du viste mig tidligere i dag, har du brug for at ...?' },
-  { label: 'Uselvisk, uopfordret initiativ' },
-  { label: 'Tilbyde min assistance', script: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
-  { label: 'Tage lead på eget initiativ', script: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
-];
-
-// Internal state (single select, no score — tracking only)
-const MY_STATES = ['Voksen','Barn'];
-
-// Daily: my state with scores
-const MY_DAILY = [
-  { label: 'Rolig',          score: +10 },
-  { label: 'Voksen',         score: +10 },
-  { label: 'Glad',           score: +10 },
-  { label: 'Åben',           score: +10 },
-  { label: 'Tilbagetrukket', score: -10 },
-  { label: 'Usikker',        score: -10 },
-  { label: 'Barn',           score: -10 },
-  { label: 'Vred',           score: -10 },
-  { label: 'Såret',          score: -10 },
-];
-
-// Daily: her state with scores
-const HER_DAILY = [
-  { label: 'Rolig',          score: +10 },
-  { label: 'Glad',           score: +10 },
-  { label: 'Åben',           score: +10 },
-  { label: 'Sårbar',         score: +10 },
-  { label: 'Tilbagetrukket', score: -10 },
-  { label: 'Voksen',         score: -10 },
-  { label: 'Såret',          score: -10 },
-  { label: 'Vred',           score: -10 },
-];
-
-// Checklist styres via checkState — ikke et array af items
-
 const REMINDERS = [
   'Er du rolig i dig selv lige nu?',
   'Kan du være der for den anden, uden at panikke igen?',
@@ -796,70 +672,9 @@ const REMINDERS = [
 function getData() { try { return JSON.parse(localStorage.getItem('vaekst') || '{}'); } catch { return {}; } }
 function setData(d) { try { localStorage.setItem('vaekst', JSON.stringify(d)); } catch {} }
 function todayKey() { return new Date().toISOString().slice(0,10); }
-function getEntries() { return getData().entries || []; }
-function getDailies() { return getData().dailies || {}; }
-
-function saveEntry(entry) {
-  const d = getData();
-  if (!d.entries) d.entries = [];
-  d.entries = d.entries.filter(e => !(e.date === entry.date && e.session === entry.session));
-  d.entries.push(entry);
-  setData(d);
-}
-
-function todaysDone() {
-  return getEntries().filter(e => e.date === todayKey()).map(e => e.session);
-}
-
-function todaysSkipped() {
-  const d = getData();
-  return (d.skipped || {})[todayKey()] || [];
-}
-
-function skipSession(s) {
-  const d = getData();
-  if (!d.skipped) d.skipped = {};
-  const arr = d.skipped[todayKey()] || [];
-  const i = arr.indexOf(s);
-  if (i > -1) arr.splice(i, 1); else arr.push(s);
-  d.skipped[todayKey()] = arr;
-  setData(d);
-  renderHome();
-  showSessionPicker();
-}
-
-function calcEntryScore(entry) {
-  const respScore = (entry.responses || []).reduce((sum, r) => {
-    const found = RESPONSES.find(x => x.label === r);
-    return sum + (found ? found.score : 0);
-  }, 0);
-  const outcomeScore = (entry.outcomes || []).reduce((sum, o) => {
-    const found = OUTCOMES.find(x => x.label === o);
-    return sum + (found ? found.score : 0);
-  }, 0);
-  return respScore + outcomeScore;
-}
-
-function calcDailyScore(daily) {
-  if (!daily) return 0;
-  let score = 0;
-  (daily.myStates || []).forEach(s => {
-    const found = MY_DAILY.find(x => x.label === s);
-    if (found) score += found.score;
-  });
-  (daily.herStates || []).forEach(s => {
-    const found = HER_DAILY.find(x => x.label === s);
-    if (found) score += found.score;
-  });
-  return score;
-}
 
 function calcTodayTotal() {
-  const today = todayKey();
-  const entries = getEntries().filter(e => e.date === today);
-  const ciScore = entries.reduce((sum, e) => sum + calcEntryScore(e), 0);
-  const daily = getDailies()[today];
-  return ciScore + calcDailyScore(daily) + getImpulsScore() + registrerDayScore();
+  return getImpulsScore() + registrerDayScore();
 }
 
 function scoreStyle(score) {
@@ -876,13 +691,16 @@ function scoreColor(score) {
 
 // ---- NAVIGATION ----
 function goTo(name, session) {
+  const view = document.getElementById('view-' + name);
+  if (!view) return;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
+  view.classList.add('active');
   const nb = document.getElementById('nb-' + name);
   if (nb) nb.classList.add('active');
-  const renders = { home: renderHome, registrer: renderRegistrer, checkin: () => renderCheckin(session), daily: initDaily, history: renderHistory, gpt: renderGpt };
+  const renders = { home: renderHome, registrer: renderRegistrer, overblik: renderOverblik, history: renderHistory, gpt: renderGpt };
   renders[name] && renders[name]();
+  window.scrollTo(0, 0);
 }
 
 // ---- HOME ----
@@ -892,16 +710,6 @@ function renderHome() {
   const greet = h < 10 ? 'God morgen' : h < 14 ? 'God formiddag' : h < 18 ? 'God eftermiddag' : h < 21 ? 'God aften' : 'God nat';
   document.getElementById('homeGreet').textContent = greet + ' 👋';
   document.getElementById('homeDate').textContent = now.toLocaleDateString('da-DK', {weekday:'long',day:'numeric',month:'long'}) + '';
-
-  const total = calcTodayTotal();
-  const color = scoreColor(total);
-  const sign = total > 0 ? '+' : '';
-  document.getElementById('homeScore').innerHTML = `
-    <div class="score-big card" style="background: ${total > 0 ? 'rgba(16,185,129,0.08)' : total < 0 ? 'rgba(239,68,68,0.08)' : 'var(--card)'}; border: 2px solid ${total > 0 ? 'rgba(16,185,129,0.3)' : total < 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)'};">
-      <div class="score-number" style="color:${color};">${sign}${total}</div>
-      <div class="score-label">Dagens samlede score</div>
-    </div>
-  `;
 
   const klarChecked = _getKlarItems();
   const klarSubs = _getKlarSubs();
@@ -1013,74 +821,8 @@ function renderHome() {
   renderInitiativList();
   renderForkantStikord();
 
-  const done = todaysDone();
-  const skipped = todaysSkipped();
-  const today = todayKey();
-  const entries = getEntries().filter(e => e.date === today);
-
-  const doneCount = done.length;
-  const dots = SESSIONS.map((s,i) => {
-    const isDone = done.includes(s);
-    const isSkipped = skipped.includes(s);
-    return `<span style="font-size:16px;">${isDone ? S_ICONS[i] : isSkipped ? '⊘' : '○'}</span>`;
-  }).join('');
-  const sessionRows = SESSIONS.map((s,i) => {
-    const isDone = done.includes(s);
-    const isSkipped = skipped.includes(s);
-    const entry = entries.find(e => e.session === s);
-    const sc = entry ? calcEntryScore(entry) : null;
-    const scoreHtml = sc !== null
-      ? `<span class="session-score ${scoreStyle(sc)}">${sc > 0 ? '+' : ''}${sc}</span>`
-      : '';
-    return `
-      <div class="session-row ${isDone ? 'done' : ''}" style="${isSkipped ? 'opacity:0.5;' : ''}" onclick="goTo('checkin','${s}')">
-        <span class="session-emoji">${S_ICONS[i]}</span>
-        <span class="session-name" style="${isSkipped ? 'text-decoration:line-through;' : ''}">${s}</span>
-        ${scoreHtml}
-        <span class="session-check" style="color:${isDone ? 'var(--green)' : isSkipped ? 'var(--muted)' : 'var(--border)'};">${isDone ? '✓' : isSkipped ? '⊘' : '→'}</span>
-      </div>`;
-  }).join('');
-  document.getElementById('homeSessionCard').innerHTML = `
-    <button class="dropdown-toggle" onclick="toggleDropdown('sessionDropdown')" style="width:100%;">
-      <span style="display:flex;align-items:center;gap:10px;">
-        <span style="font-weight:700;">Dagens resultater</span>
-        <span style="display:flex;gap:4px;align-items:center;">${dots}</span>
-        <span style="color:var(--muted);font-size:13px;">${doneCount}/${SESSIONS.length}</span>
-      </span>
-      <span>▾</span>
-    </button>
-    <div class="dropdown-list" id="sessionDropdown">
-      <div style="padding:8px 4px 4px;">
-        <button onclick="openReadyCheck()" style="width:100%;padding:12px;border-radius:12px;border:2px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);color:var(--primary);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;">🧭 Klar til at checke ind?</button>
-      </div>
-      ${sessionRows}
-    </div>
-  `;
-
   renderHoldeKursenCard();
   renderBrydeCard();
-
-  const daily = getDailies()[today];
-  if (daily && ((daily.myStates && daily.myStates.length) || (daily.herStates && daily.herStates.length))) {
-    const ds = calcDailyScore(daily);
-    document.getElementById('homeDailyContent').innerHTML = `
-      <div class="summary-row">
-        <div class="summary-cell">
-          <div class="lbl">Din tilstand</div>
-          <div class="val" style="color:var(--green); font-size:13px;">${(daily.myStates||[]).join(', ') || '–'}</div>
-        </div>
-        <div class="summary-cell">
-          <div class="lbl">Hendes tilstand</div>
-          <div class="val" style="color:var(--primary); font-size:13px;">${(daily.herStates||[]).join(', ') || '–'}</div>
-        </div>
-      </div>
-      <div style="text-align:center; font-size:13px; color:${scoreColor(ds)}; font-weight:700;">
-        Dagsoversigtsscore: ${ds > 0 ? '+' : ''}${ds}
-      </div>
-    `;
-  } else {
-    document.getElementById('homeDailyContent').innerHTML = '<p style="color:var(--muted); font-size:14px;">Ikke udfyldt endnu</p>';
-  }
 
   // Reminders
   const allRems = _getAllRems();
@@ -1331,389 +1073,6 @@ setInterval(checkReminderAlarms, 30000);
 if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
   Notification.requestPermission();
 }
-
-// ---- CHECK-IN ----
-let ci = { session: null, step: 0, obs: [], exchange: [], responses: [], outcomes: [], initiatives: [], state: null };
-
-function renderCheckin(preselect) {
-  ci = { session: null, step: 0, obs: [], exchange: [], responses: [], outcomes: [], initiatives: [], state: null };
-  if (preselect) {
-    ci.session = preselect;
-    showCiForm();
-  } else {
-    showSessionPicker();
-  }
-}
-
-function showSessionPicker() {
-  const done = todaysDone();
-  document.querySelector('#view-checkin .page-header p').textContent = 'Vælg et tidspunkt';
-  const skipped = todaysSkipped();
-  document.getElementById('ciContent').innerHTML = `
-    <button onclick="openReadyCheck()" style="width:100%;margin-bottom:16px;padding:14px;border-radius:14px;border:2px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);color:var(--primary);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">🧭 Klar til at checke ind?</button>
-    <div class="session-grid">
-      ${SESSIONS.map((s,i) => {
-        const isDone = done.includes(s);
-        const isSkipped = skipped.includes(s);
-        return `<div style="display:flex;flex-direction:column;gap:6px;">
-          <button class="session-btn ${isDone ? 'done' : ''}" style="${isSkipped ? 'opacity:0.45;text-decoration:line-through;' : ''}" onclick="selectSession('${s}')">
-            <span>${S_ICONS[i]}</span><span>${s}</span>${isDone ? '<span style="font-size:11px;opacity:0.7;margin-top:2px;">✏️ Ret</span>' : ''}
-          </button>
-          <button onclick="skipSession('${s}')" style="padding:6px;border-radius:10px;border:1px solid ${isSkipped ? 'var(--primary)' : 'var(--border)'};background:${isSkipped ? 'rgba(59,130,246,0.12)' : 'transparent'};color:${isSkipped ? 'var(--primary)' : 'var(--muted)'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-            ${isSkipped ? '↩ Fortryd skip' : '⊘ Skip'}
-          </button>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-}
-
-function selectSession(s) {
-  ci.session = s;
-  ci.step = 0;
-  // Pre-udfyld med eksisterende data hvis sessionen er lavet i dag
-  const existing = getEntries().find(e => e.date === todayKey() && e.session === s);
-  if (existing) {
-    ci.obs        = [...(existing.observations || [])];
-    ci.exchange   = [...(existing.exchange || [])];
-    ci.responses  = [...(existing.responses || [])];
-    ci.outcomes   = [...(existing.outcomes || [])];
-    ci.initiatives= [...(existing.initiatives || [])];
-    ci.state      = existing.state || null;
-  } else {
-    ci.obs = []; ci.exchange = []; ci.responses = []; ci.outcomes = []; ci.initiatives = []; ci.state = null;
-  }
-  showCiForm();
-}
-
-function showCiForm() {
-  const isEdit = getEntries().some(e => e.date === todayKey() && e.session === ci.session);
-  document.querySelector('#view-checkin .page-header p').textContent = isEdit ? '✏️ Retter: ' + ci.session : ci.session;
-  renderCiStep();
-}
-
-// ---- KLAR TIL CHECK-IN ----
-let rc = { step: 0, knowsHerState: null, herState: null, hasPlan: null, hasOpening: null };
-
-function openReadyCheck() {
-  rc = { step: 0, knowsHerState: null, herState: null, hasPlan: null, hasOpening: null };
-  document.getElementById('readyCheckOverlay').classList.add('show');
-  renderReadyCheck();
-}
-
-function closeReadyCheck() {
-  document.getElementById('readyCheckOverlay').classList.remove('show');
-}
-
-function renderReadyCheck() {
-  const el = document.getElementById('readyCheckContent');
-  const btn = (label, color, fn) => `<button onclick="${fn}" style="width:100%;padding:16px;border-radius:12px;border:none;background:${color};color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;">${label}</button>`;
-  const chip = (label, val, current, fn) => `<button onclick="${fn}" style="padding:12px 16px;border-radius:10px;border:2px solid ${current===val ? 'var(--primary)' : 'var(--border)'};background:${current===val ? 'rgba(59,130,246,0.15)' : 'var(--card2)'};color:${current===val ? 'var(--primary)' : 'var(--text)'};font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">${label}</button>`;
-  const card = (content) => `<div class="card">${content}</div>`;
-  const title = (t) => `<div class="card-title" style="margin-bottom:16px;">${t}</div>`;
-  const sub = (t) => `<div class="card-sub" style="margin-bottom:20px;line-height:1.6;">${t}</div>`;
-  const next = (fn) => `<button onclick="${fn}" class="btn-primary" style="margin-top:8px;">Videre →</button>`;
-
-  if (rc.step === 0) {
-    el.innerHTML = card(`
-      ${title('Er der en tilstand jeg føler mig sikker på hun er i?')}
-      ${btn('Ja', 'var(--green)', 'rc.knowsHerState=true; rc.step=1; renderReadyCheck();')}
-      ${btn('Nej', 'var(--border)', 'rc.knowsHerState=false; rc.step=2; renderReadyCheck();')}
-    `);
-  } else if (rc.step === 1) {
-    el.innerHTML = card(`
-      ${title('Hvad er hendes tilstand?')}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-        ${['Neutral','Glad','Træt','Vred'].map(s => chip(s, s, rc.herState, `rc.herState='${s}'; renderReadyCheck();`)).join('')}
-      </div>
-      ${rc.herState ? next('rc.step=2; renderReadyCheck();') : ''}
-    `);
-  } else if (rc.step === 2) {
-    el.innerHTML = card(`
-      ${title('Har jeg en plan for hvordan jeg vil møde hende?')}
-      ${btn('Ja', 'var(--green)', 'rc.hasPlan=true; rc.step=4; renderReadyCheck();')}
-      ${btn('Nej', 'var(--border)', 'rc.hasPlan=false; rc.step=3; renderReadyCheck();')}
-    `);
-  } else if (rc.step === 3) {
-    el.innerHTML = card(`
-      ${title('Hvad vil være den sikre måde?')}
-      ${sub('Tag et øjeblik til at mærke efter.<br>Hvad ved du allerede fungerer?<br>Hvad har vist sig sikkert tidligere?')}
-      ${next('rc.step=4; renderReadyCheck();')}
-    `);
-  } else if (rc.step === 4) {
-    el.innerHTML = card(`
-      ${title('Har jeg en åbning klar?')}
-      ${btn('Ja', 'var(--green)', 'rc.hasOpening=true; rc.step=5; renderReadyCheck();')}
-      ${btn('Nej', 'var(--border)', 'rc.hasOpening=false; rc.step=5; renderReadyCheck();')}
-    `);
-  } else if (rc.step === 5) {
-    if (rc.hasOpening) {
-      el.innerHTML = card(`
-        ${title('Hvordan vil jeg fortsætte derfra?')}
-        ${sub('Du har åbningen.<br>Mærk efter hvad der naturligt følger.<br>Hold det enkelt og konkret.')}
-        ${next('rc.step=6; renderReadyCheck();')}
-      `);
-    } else {
-      el.innerHTML = card(`
-        ${title('Hvad er det bedste jeg kan tilbyde?')}
-        ${sub('Du behøver ikke have det perfekte at sige.<br>Hvad er den mest ærlige, rolige tilstedeværelse du kan møde hende med lige nu?')}
-        ${next('rc.step=6; renderReadyCheck();')}
-      `);
-    }
-  } else if (rc.step === 6) {
-    el.innerHTML = card(`
-      <div style="text-align:center;padding:20px 0;">
-        <div style="font-size:48px;margin-bottom:12px;">✅</div>
-        <div class="card-title" style="font-size:22px;margin-bottom:8px;">Klar!</div>
-        <div style="color:var(--muted);font-size:14px;margin-bottom:24px;">Du har gjort det forarbejde du kan.<br>Gå ind med det du har.</div>
-      </div>
-      <button onclick="closeReadyCheck()" class="btn-primary">Vælg check-in tidspunkt →</button>
-    `);
-  }
-}
-
-function renderCiStep() {
-  const TOTAL = 5;
-  const dots = Array.from({length: TOTAL}, (_,i) =>
-    `<div class="step-dot ${i < ci.step ? 'done' : i === ci.step ? 'now' : ''}"></div>`
-  ).join('');
-
-  let body = '';
-
-  if (ci.step === 0) {
-    const EXCHANGE_Q = [
-      'Har jeg modtaget sparring eller omsorg?',
-      'Har jeg bedt hende om at yde noget?',
-      'Har jeg ydet noget for hende?',
-      'Har hun bedt mig om at yde noget?',
-      'Har jeg givet hende sparring eller omsorg?',
-    ];
-    body = `
-      <div class="card">
-        <div class="card-title">Givet og modtaget</div>
-        <div class="card-sub">Vælg alt der passer — tæller i antal</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;margin-bottom:16px;">
-          ${EXCHANGE_Q.map(q => {
-            const on = ci.exchange.includes(q);
-            return `<button onclick="toggleExchange('${q.replace(/'/g,"\\'")}'); renderCiStep();"
-              style="text-align:left;padding:12px 14px;border-radius:10px;border:2px solid ${on ? 'var(--primary)' : 'var(--border)'};background:${on ? 'rgba(59,130,246,0.12)' : 'var(--card2)'};color:${on ? 'var(--primary)' : 'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
-              ${on ? '✓ ' : ''}${q}
-            </button>`;
-          }).join('')}
-        </div>
-        <button class="btn-primary" onclick="ciNext()">Videre →</button>
-        <button class="btn-secondary" onclick="showSessionPicker()">← Vælg andet tidspunkt</button>
-      </div>
-    `;
-  } else if (ci.step === 1) {
-    body = `
-      <div class="card">
-        <div class="card-title">${S_ICONS[SESSIONS.indexOf(ci.session)]} Observationer</div>
-        <div class="card-sub">Hvad observerede du hos din partner? Vælg alt der passer</div>
-        <div class="chip-grid">
-          ${OBSERVATIONS.map(o => `
-            <button class="chip ${ci.obs.includes(o) ? 'on' : ''}" onclick="toggleObs('${o}')">${o}</button>`
-          ).join('')}
-        </div>
-        <button class="btn-primary" ${ci.obs.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
-        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
-      </div>
-    `;
-  } else if (ci.step === 2) {
-    const currentScore = ci.responses.reduce((s, r) => {
-      const found = RESPONSES.find(x => x.label === r);
-      return s + (found ? found.score : 0);
-    }, 0);
-    const scoreHtml = ci.responses.length > 0
-      ? `<div style="text-align:center; font-weight:700; font-size:16px; color:${scoreColor(currentScore)}; margin-bottom:12px;">
-           Score: ${currentScore > 0 ? '+' : ''}${currentScore}
-         </div>`
-      : '';
-    body = `
-      <div class="card">
-        <div class="card-title">Din reaktion</div>
-        <div class="card-sub">Hvad gjorde du? Vælg alt der passer</div>
-        ${scoreHtml}
-        <div class="chip-grid">
-          ${RESPONSES.map(r => {
-            const isOn = ci.responses.includes(r.label);
-            const cls = r.score > 0 ? 'chip pos' : 'chip neg';
-            return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleResp('${r.label}')">
-              ${r.score > 0 ? '✚' : '−'} ${r.label}
-            </button>`;
-          }).join('')}
-        </div>
-        <button class="btn-primary" ${ci.responses.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
-        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
-      </div>
-    `;
-  } else if (ci.step === 3) {
-    const outcomeScore = ci.outcomes.reduce((s, o) => {
-      const found = OUTCOMES.find(x => x.label === o);
-      return s + (found ? found.score : 0);
-    }, 0);
-    const scoreHtml = ci.outcomes.length > 0
-      ? `<div style="text-align:center; font-weight:700; font-size:16px; color:${scoreColor(outcomeScore)}; margin-bottom:12px;">
-           Score: ${outcomeScore > 0 ? '+' : ''}${outcomeScore}
-         </div>`
-      : '';
-    body = `
-      <div class="card">
-        <div class="card-title">Udfald</div>
-        <div class="card-sub">Hvordan landede det? Vælg alt der passer</div>
-        ${scoreHtml}
-        <div class="chip-grid">
-          ${OUTCOMES.map(o => {
-            const isOn = ci.outcomes.includes(o.label);
-            const cls = o.score > 0 ? 'chip pos' : 'chip neg';
-            return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleOutcome('${o.label}')">
-              ${o.score > 0 ? '✚' : '−'} ${o.label}
-            </button>`;
-          }).join('')}
-        </div>
-        <button class="btn-primary" ${ci.outcomes.length === 0 ? 'disabled' : ''} onclick="ciNext()">Videre →</button>
-        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
-      </div>
-    `;
-  } else if (ci.step === 4) {
-    body = `
-      <div class="card">
-        <div class="card-title">Tilstand & Initiativ</div>
-        <div class="card-sub" style="margin-bottom:8px;">Hvad mærkede du i dig selv?</div>
-        <div class="big-btn-grid" style="margin-bottom:20px;">
-          <button class="big-btn ${ci.state === 'Voksen' ? 'on-green' : ''}"
-            onclick="ci.state='Voksen'; renderCiStep();" style="padding:20px 10px; font-size:20px;">
-            🧠<br><span style="font-size:14px; margin-top:6px; display:block;">Voksen</span>
-          </button>
-          <button class="big-btn ${ci.state === 'Barn' ? 'on-yellow' : ''}"
-            onclick="ci.state='Barn'; renderCiStep();" style="padding:20px 10px; font-size:20px;">
-            👶<br><span style="font-size:14px; margin-top:6px; display:block;">Barn</span>
-          </button>
-        </div>
-        <div class="card-sub" style="margin-bottom:8px;">Initiativ — vælg alt der passer</div>
-        <div class="chip-grid">
-          ${INITIATIVES.map(iv => `
-            <button class="chip ${ci.initiatives.includes(iv.label) ? 'on' : ''}" onclick="toggleInitiative('${iv.label}')">${iv.label}</button>`
-          ).join('')}
-        </div>
-        <div style="text-align:center; margin:8px 0 16px;">
-          <div style="font-size:32px; font-weight:800; color:${scoreColor(calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes }))};">${calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes }) > 0 ? '+' : ''}${calcEntryScore({ responses: ci.responses, outcomes: ci.outcomes })}</div>
-          <div style="font-size:13px; color:var(--muted); margin-top:2px;">Score for dette check-in</div>
-        </div>
-        <button class="btn-primary" ${!ci.state ? 'disabled' : ''} onclick="saveCiEntry()">💾 Gem check-in</button>
-        <button class="btn-secondary" onclick="ciPrev()">← Tilbage</button>
-      </div>
-    `;
-  }
-
-  document.getElementById('ciContent').innerHTML = `<div class="step-row">${dots}</div>${body}`;
-
-}
-
-let _rewardTimer = null;
-function showRewardImage() {
-  const el = document.getElementById('rewardOverlay');
-  if (!el) return;
-  clearTimeout(_rewardTimer);
-  el.classList.add('show');
-  _rewardTimer = setTimeout(() => el.classList.remove('show'), 3000);
-}
-
-function toggleDropdown(id) {
-  document.getElementById(id).classList.toggle('open');
-}
-
-function toggleKlarItem(item) {
-  const items = _getKlarItems();
-  const i = items.indexOf(item);
-  if (i > -1) items.splice(i, 1); else items.push(item);
-  _saveKlarItems();
-  renderHome();
-  const dd = document.getElementById('klarDropdown');
-  if (dd) dd.classList.add('open');
-}
-
-function selectKlarSub(parentLabel, subLabel) {
-  const items = _getKlarItems();
-  const subs = _getKlarSubs();
-  if (subs[parentLabel] === subLabel) {
-    // Deselect
-    delete subs[parentLabel];
-    const i = items.indexOf(parentLabel);
-    if (i > -1) items.splice(i, 1);
-  } else {
-    subs[parentLabel] = subLabel;
-    if (!items.includes(parentLabel)) items.push(parentLabel);
-  }
-  _saveKlarItems();
-  renderHome();
-  const dd = document.getElementById('klarDropdown');
-  if (dd) dd.classList.add('open');
-}
-
-function toggleHomeInit(iv) {
-  const d = getData();
-  if (!d.dailies) d.dailies = {};
-  if (!d.dailies[todayKey()]) d.dailies[todayKey()] = {};
-  const inits = d.dailies[todayKey()].homeInitiatives || [];
-  const idx = inits.indexOf(iv);
-  if (idx > -1) inits.splice(idx, 1); else inits.push(iv);
-  d.dailies[todayKey()].homeInitiatives = inits;
-  setData(d);
-  renderHome();
-  document.getElementById('initDropdown').classList.add('open');
-}
-
-function toggleObs(o) {
-  const i = ci.obs.indexOf(o);
-  if (i > -1) ci.obs.splice(i, 1); else ci.obs.push(o);
-  renderCiStep();
-}
-
-function toggleResp(r) {
-  const i = ci.responses.indexOf(r);
-  if (i > -1) ci.responses.splice(i, 1); else ci.responses.push(r);
-  renderCiStep();
-}
-
-function toggleOutcome(o) {
-  const i = ci.outcomes.indexOf(o);
-  if (i > -1) ci.outcomes.splice(i, 1); else ci.outcomes.push(o);
-  renderCiStep();
-}
-
-function toggleInitiative(iv) {
-  const i = ci.initiatives.indexOf(iv);
-  if (i > -1) ci.initiatives.splice(i, 1); else ci.initiatives.push(iv);
-  renderCiStep();
-}
-
-function ciNext() { ci.step++; renderCiStep(); }
-function ciPrev() { ci.step--; renderCiStep(); }
-function toggleExchange(q) { const i = ci.exchange.indexOf(q); if (i > -1) ci.exchange.splice(i,1); else ci.exchange.push(q); }
-
-function saveCiEntry() {
-  const note = document.getElementById('ciNote')?.value || '';
-  saveEntry({ date: todayKey(), session: ci.session, observations: ci.obs, exchange: ci.exchange, responses: ci.responses, outcomes: ci.outcomes, initiatives: ci.initiatives, state: ci.state, note, ts: Date.now() });
-  const entryScore = ci.responses.reduce((s, r) => {
-    const found = RESPONSES.find(x => x.label === r);
-    return s + (found ? found.score : 0);
-  }, 0);
-  document.getElementById('ciContent').innerHTML = `
-    <div class="card" style="text-align:center; padding:36px 20px;">
-      <div style="font-size:64px; margin-bottom:14px;">✅</div>
-      <div class="card-title">Gemt!</div>
-      <div style="font-size:32px; font-weight:800; color:${scoreColor(entryScore)}; margin-bottom:8px;">${entryScore > 0 ? '+' : ''}${entryScore} point</div>
-      <p style="color:var(--muted); margin-bottom:20px;">${ci.session} check-in registreret.</p>
-      <button class="btn-primary" onclick="renderCheckin()">Nyt check-in</button>
-      <button class="btn-secondary" onclick="goTo('home')">Tilbage til hjem</button>
-    </div>
-  `;
-}
-
-// ---- DAILY ----
-let tempDaily = {};
-
 const KLAR_ITEMS = [
   { label: 'På forkant med:', type: 'text' },
   'Er jeg på forkant med det vi har aftalt?',
@@ -1758,76 +1117,59 @@ const KLAR_ITEMS = [
   ]},
 ];
 
-const PLANNING_ITEMS = [
-  'Er der løse ender?',
-  'Plan for dagen?',
-  'Ændringer for dagen?',
-  'Ny info der skal meldes ud?',
-];
-
-function initDaily() {
-  const existing = getDailies()[todayKey()] || {};
-  tempDaily = { myStates: [...(existing.myStates || [])], herStates: [...(existing.herStates || [])], planning: [...(existing.planning || [])] };
-  renderDaily();
+// ---- FÆLLES UI-HJÆLPERE ----
+let _rewardTimer = null;
+function showRewardImage() {
+  const el = document.getElementById('rewardOverlay');
+  if (!el) return;
+  clearTimeout(_rewardTimer);
+  el.classList.add('show');
+  _rewardTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-function renderDaily() {
-  document.getElementById('myDailyGrid').innerHTML = MY_DAILY.map(s => {
-    const isOn = tempDaily.myStates.includes(s.label);
-    const cls = s.score > 0 ? 'chip pos' : s.score < 0 ? 'chip neg' : 'chip neu';
-    const prefix = s.score > 0 ? '✚' : s.score < 0 ? '−' : '?';
-    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleMyState('${s.label}')">${prefix} ${s.label}</button>`;
-  }).join('');
-
-  document.getElementById('herDailyGrid').innerHTML = HER_DAILY.map(s => {
-    const isOn = tempDaily.herStates.includes(s.label);
-    const cls = s.score > 0 ? 'chip pos' : 'chip neg';
-    return `<button class="${cls} ${isOn ? 'on' : ''}" onclick="toggleHerState('${s.label}')">${s.score > 0 ? '✚' : '−'} ${s.label}</button>`;
-  }).join('');
-
-  document.getElementById('planningChecks').innerHTML = PLANNING_ITEMS.map(item => {
-    const checked = tempDaily.planning.includes(item);
-    return `
-      <div class="check-item ${checked ? 'done' : ''}" onclick="togglePlanning('${item}')" style="margin-bottom:8px;">
-        <div class="check-circle">${checked ? '✓' : ''}</div>
-        <div class="check-label">${item}</div>
-      </div>`;
-  }).join('');
+function toggleDropdown(id) {
+  document.getElementById(id).classList.toggle('open');
 }
 
-function togglePlanning(item) {
-  const i = tempDaily.planning.indexOf(item);
-  if (i > -1) tempDaily.planning.splice(i, 1); else tempDaily.planning.push(item);
-  renderDaily();
+function toggleKlarItem(item) {
+  const items = _getKlarItems();
+  const i = items.indexOf(item);
+  if (i > -1) items.splice(i, 1); else items.push(item);
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
 }
 
-function toggleMyState(s) {
-  const i = tempDaily.myStates.indexOf(s);
-  if (i > -1) tempDaily.myStates.splice(i, 1); else tempDaily.myStates.push(s);
-  renderDaily();
+function selectKlarSub(parentLabel, subLabel) {
+  const items = _getKlarItems();
+  const subs = _getKlarSubs();
+  if (subs[parentLabel] === subLabel) {
+    delete subs[parentLabel];
+    const i = items.indexOf(parentLabel);
+    if (i > -1) items.splice(i, 1);
+  } else {
+    subs[parentLabel] = subLabel;
+    if (!items.includes(parentLabel)) items.push(parentLabel);
+  }
+  _saveKlarItems();
+  renderHome();
+  const dd = document.getElementById('klarDropdown');
+  if (dd) dd.classList.add('open');
 }
 
-function toggleHerState(s) {
-  const i = tempDaily.herStates.indexOf(s);
-  if (i > -1) tempDaily.herStates.splice(i, 1); else tempDaily.herStates.push(s);
-  renderDaily();
-}
-
-function updateDailyGptLink() {
-  const note = document.getElementById('dailyNote')?.value || '';
-  const msg = `Dagsoversigt: Min tilstand var "${tempDaily.myStates.join(', ') || '?'}", hendes var "${tempDaily.herStates.join(', ') || '?'}".` + (note ? '\n\n' + note : '');
-  const el = document.getElementById('dailyGptBtn');
-}
-
-function saveDailyAction() {
+function toggleHomeInit(iv) {
   const d = getData();
   if (!d.dailies) d.dailies = {};
-  d.dailies[todayKey()] = { ...tempDaily };
+  if (!d.dailies[todayKey()]) d.dailies[todayKey()] = {};
+  const inits = d.dailies[todayKey()].homeInitiatives || [];
+  const idx = inits.indexOf(iv);
+  if (idx > -1) inits.splice(idx, 1); else inits.push(iv);
+  d.dailies[todayKey()].homeInitiatives = inits;
   setData(d);
-  showToast('Dagsoversigt gemt ✓');
+  renderHome();
+  document.getElementById('initDropdown').classList.add('open');
 }
-
-function updateDailyGptLink() {}
 
 // ---- HISTORY ----
 function renderHistory() {
@@ -1853,42 +1195,35 @@ function renderHistory() {
     </div>`;
   }
 
-  const entries = [...getEntries()].reverse();
-  if (entries.length === 0) {
-    document.getElementById('histContent').innerHTML = topHtml + '<p style="color:var(--muted); text-align:center; padding:40px;">Ingen check-ins endnu</p>';
+  const log = [..._getEventLog()].filter(e => e.ts).sort((a, b) => b.ts - a.ts).slice(0, 120);
+  if (log.length === 0) {
+    document.getElementById('histContent').innerHTML = topHtml + '<p style="color:var(--muted); text-align:center; padding:40px;">Ingen registreringer endnu</p>';
     return;
   }
-  document.getElementById('histContent').innerHTML = topHtml + entries.slice(0, 40).map(e => {
-    const sc = calcEntryScore(e);
-    const date = new Date(e.ts).toLocaleDateString('da-DK', {day:'numeric', month:'short'});
-    const stateColor = e.state === 'Voksen' ? 'var(--green)' : 'var(--yellow)';
+
+  const byDay = {};
+  log.forEach(e => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+
+  const dayHtml = Object.keys(byDay).sort((a, b) => b.localeCompare(a)).map(day => {
+    const rows = byDay[day];
+    const daySum = rows.reduce((s, e) => s + (e.points || 0), 0);
+    const label = day === todayKey() ? 'I dag'
+      : new Date(day).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'short' });
     return `
-      <div class="hist-card">
-        <div class="hist-header">
-          <span class="hist-tag">${e.session}</span>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <span class="session-score ${scoreStyle(sc)}">${sc > 0 ? '+' : ''}${sc}</span>
-            <span class="hist-date">${e.date === todayKey() ? 'I dag' : date}</span>
-          </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-weight:700;text-transform:capitalize;">${label}</span>
+          <span style="font-weight:800;color:${scoreColor(daySum)};">${daySum > 0 ? '+' : ''}${daySum}</span>
         </div>
-        <div class="hist-chips">
-          ${(e.observations||[]).map(o => `<span class="hist-chip">${o}</span>`).join('')}
-        </div>
-        <div class="hist-meta">
-          <span>↳ ${(e.responses||[e.response]).filter(Boolean).join(', ')}</span>
-          <span>·</span>
-          <span style="color:${stateColor};">${e.state === 'Voksen' ? '🧠' : '👶'} ${e.state}</span>
-        </div>
-        ${(e.outcomes||[]).length ? `<div class="hist-meta" style="margin-top:4px;">
-          <span>Udfald: ${e.outcomes.join(', ')}</span>
-        </div>` : ''}
-        ${(e.initiatives||[]).length ? `<div class="hist-meta" style="margin-top:2px;">
-          <span>Initiativ: ${e.initiatives.join(', ')}</span>
-        </div>` : ''}
-        ${e.note ? `<div class="hist-note">"${e.note.length > 90 ? e.note.slice(0,90)+'…' : e.note}"</div>` : ''}
-      </div>
-    `;
+        ${rows.map(e => `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">
+            <span style="flex:1;min-width:0;">${e.label || e.key}</span>
+            <span style="flex:none;color:${scoreColor(e.points || 0)};font-weight:700;">${e.points ? (e.points > 0 ? '+' : '') + e.points : '·'}</span>
+          </div>`).join('')}
+      </div>`;
   }).join('');
+
+  document.getElementById('histContent').innerHTML = topHtml + dayHtml;
 }
 
 // ---- STIKORD ----
@@ -2675,12 +2010,7 @@ function onFokusInput(val) {
   if (el) { el.textContent = val ? '🎯 På forkant med: ' + val : ''; el.style.display = val ? 'block' : 'none'; }
 }
 
-let _adfaerd = null;
-function _getAdfaerd() {
-  if (_adfaerd === null) _adfaerd = getData().adfaerd || [];
-  return _adfaerd;
-}
-
+// ADFAERD_TYPES bruges nu kun som datakilde for LOG_ITEMS i Registrér-fanen.
 const ADFAERD_TYPES = [
   { type: 'naervaerende', score: 20,  label: '🟢 Nærværende og spurgte ind',                                                   scoreLabel: '+20 point',     rgb: '16,185,129' },
   { type: 'lyttende',     score: -10, label: '🟡 Lyttende men passiv',                                                          scoreLabel: '−10 point',    rgb: '245,158,11' },
@@ -2697,15 +2027,6 @@ const ADFAERD_TYPES = [
   { type: 'usikkerhedTilbage', score: -20, label: '😟 Usikkerhed holdt mig tilbage',                                                 scoreLabel: '−20 point',    rgb: '239,68,68' },
   { type: 'usikkerhedGentog', score: -30, label: '🔁 Usikkerhed fik mig til at gentage gammelt mønster',                              scoreLabel: '−30 point',    rgb: '239,68,68' },
 ];
-
-let _adfaerdSession = {};
-
-function openAdfaerd() {
-  _adfaerdSession = {};
-  document.getElementById('adfaerdOverlay').classList.add('show');
-  renderAdfaerdBtns();
-}
-function closeAdfaerd() { document.getElementById('adfaerdOverlay').classList.remove('show'); }
 
 // ---- MØNSTER ----
 const MOENSTER_ITEMS = [
@@ -2809,60 +2130,6 @@ function logMoenster() {
   renderHome();
 }
 
-function renderAdfaerdBtns() {
-  document.getElementById('adfaerdBtns').innerHTML = ADFAERD_TYPES.map(t => {
-    const on = !!_adfaerdSession[t.type];
-    const bg = on ? `rgba(${t.rgb},0.85)` : `rgba(${t.rgb},0.1)`;
-    const col = on ? '#fff' : `rgba(${t.rgb},1)`;
-    return `<button onclick="toggleAdfaerd('${t.type}',${t.score})" style="padding:14px 16px;border-radius:14px;border:2px solid rgba(${t.rgb},1);background:${bg};color:${col};font-weight:700;font-size:15px;cursor:pointer;text-align:left;width:100%;font-family:inherit;transition:background 0.15s,color 0.15s;">
-      ${t.label} &nbsp;<span style="font-weight:400;font-size:13px;">${t.scoreLabel}</span>
-    </button>`;
-  }).join('');
-}
-
-function toggleAdfaerd(type, score) {
-  if (_adfaerdSession[type]) {
-    const arr = _getAdfaerd();
-    for (let i = arr.length - 1; i >= 0; i--) {
-      if (arr[i].type === type && arr[i].date === todayKey()) { arr.splice(i, 1); break; }
-    }
-    _adfaerdSession[type] = false;
-  } else {
-    _getAdfaerd().push({ date: todayKey(), week: getWeekKey(), type, score, ts: Date.now() });
-    _adfaerdSession[type] = true;
-  }
-  const d = getData(); d.adfaerd = _adfaerd; setData(d);
-  renderAdfaerdBtns();
-  renderHome();
-}
-
-function getAdfaerdCounts() {
-  const a = _getAdfaerd();
-  const today = todayKey(), week = getWeekKey();
-  const count = (type, period) => a.filter(x => x.type === type && x[period === 'd' ? 'date' : 'week'] === (period === 'd' ? today : week)).length;
-  return {
-    naervaerende: { d: count('naervaerende','d'), w: count('naervaerende','w') },
-    lyttende:     { d: count('lyttende','d'),     w: count('lyttende','w') },
-    lukket:       { d: count('lukket','d'),        w: count('lukket','w') },
-    voksen:       { d: count('voksen','d'),        w: count('voksen','w') },
-    indreBarn:    { d: count('indreBarn','d'),     w: count('indreBarn','w') },
-    standsede:    { d: count('standsede','d'),     w: count('standsede','w') },
-    afbroed:      { d: count('afbroed','d'),       w: count('afbroed','w') },
-    vrissede:     { d: count('vrissede','d'),      w: count('vrissede','w') },
-    forHurtigt:   { d: count('forHurtigt','d'),   w: count('forHurtigt','w') },
-    grebIkke:     { d: count('grebIkke','d'),     w: count('grebIkke','w') },
-    ikkeForKant:  { d: count('ikkeForKant','d'),  w: count('ikkeForKant','w') },
-    lagdeOrdIMunden: { d: count('lagdeOrdIMunden','d'), w: count('lagdeOrdIMunden','w') },
-    usikkerhedTilbage: { d: count('usikkerhedTilbage','d'), w: count('usikkerhedTilbage','w') },
-    usikkerhedGentog: { d: count('usikkerhedGentog','d'), w: count('usikkerhedGentog','w') },
-  };
-}
-
-function getAdfaerdScore() {
-  const today = todayKey();
-  return _getAdfaerd().filter(x => x.date === today).reduce((sum, x) => sum + (x.score || 0), 0);
-}
-
 function recordStop(didStop) {
   _getStops().push({ date: todayKey(), week: getWeekKey(), stopped: didStop, ts: Date.now() });
   const d = getData();
@@ -2898,92 +2165,6 @@ function setMotivTarget(key, value) {
   m.targets[key] = Math.max(0, parseInt(value, 10) || 0);
   _saveMotiv(m);
   renderRegistrer();
-  renderHome();
-  const dd = document.getElementById('motivHandlekraft');
-  if (dd) dd.classList.add('open');
-}
-
-let _motivActivity = null;
-
-function selectMotivActivity(key) {
-  _motivActivity = key;
-  renderHome();
-  const dd = document.getElementById('motivHandlekraft');
-  if (dd) dd.classList.add('open');
-}
-
-function recordHandlekraft(outcome) {
-  const key = _motivActivity || MOTIV_ACTIVITIES[0].key;
-  const act = MOTIV_ACTIVITIES.find(a => a.key === key);
-  const noteEl = document.getElementById('motivNote');
-  const note = (act.hasNote && noteEl) ? noteEl.value.trim() : '';
-  const points = outcome === 'udfoert' ? 10 : -20;
-  const m = _getMotiv();
-  m.log.push({ id: Date.now(), area: 'handlekraft', date: todayKey(), week: getWeekKey(), activity: act.key, label: act.label, outcome, note, points, ts: Date.now() });
-  _saveMotiv(m);
-  showToast(`${outcome === 'udfoert' ? '✅' : '❌'} ${act.label} ${outcome === 'udfoert' ? 'udført' : 'droppet'} · ${points > 0 ? '+' : ''}${points} point`);
-  renderHome();
-  const dd = document.getElementById('motivHandlekraft');
-  if (dd) dd.classList.add('open');
-}
-
-function recordMotivOption(area, key) {
-  const options = area === 'modstandskraft' ? MODSTAND_OPTIONS : area === 'trovaerdighed' ? TROV_OPTIONS : MOD_OPTIONS;
-  const opt = options.find(o => o.key === key);
-  const m = _getMotiv();
-  m.log.push({ id: Date.now(), area, date: todayKey(), week: getWeekKey(), key: opt.key, label: opt.label, points: opt.points, ts: Date.now() });
-  _saveMotiv(m);
-  showToast(`${opt.points > 0 ? '+' : ''}${opt.points} point`);
-  if (area === 'mod' && opt.points > 0) showRewardImage();
-  renderHome();
-  const ddId = area === 'modstandskraft' ? 'motivModstand' : area === 'trovaerdighed' ? 'motivTrov' : 'motivMod';
-  const dd = document.getElementById(ddId);
-  if (dd) dd.classList.add('open');
-}
-
-function getMotivWeekScore(area) {
-  const m = _getMotiv();
-  const week = getWeekKey();
-  return m.log.filter(e => e.area === area && e.week === week).reduce((s, e) => s + e.points, 0);
-}
-
-function getMotivActivityWeekCounts(key) {
-  const m = _getMotiv();
-  const week = getWeekKey();
-  const entries = m.log.filter(e => e.area === 'handlekraft' && e.activity === key && e.week === week);
-  return { done: entries.filter(e => e.outcome === 'udfoert').length, dropped: entries.filter(e => e.outcome === 'droppet').length };
-}
-
-function getMotivActivityTodayCounts(key) {
-  const m = _getMotiv();
-  const today = todayKey();
-  const entries = m.log.filter(e => e.area === 'handlekraft' && e.activity === key && e.date === today);
-  return { done: entries.filter(e => e.outcome === 'udfoert').length, dropped: entries.filter(e => e.outcome === 'droppet').length };
-}
-
-function quickRecordHandlekraft(key) {
-  const act = MOTIV_ACTIVITIES.find(a => a.key === key);
-  const m = _getMotiv();
-  m.log.push({ id: Date.now(), area: 'handlekraft', date: todayKey(), week: getWeekKey(), activity: act.key, label: act.label, outcome: 'udfoert', note: '', points: 10, ts: Date.now() });
-  _saveMotiv(m);
-  showToast(`✅ ${act.label} udført · +10 point`);
-  renderHome();
-  const dd = document.getElementById('motivHandlekraft');
-  if (dd) dd.classList.add('open');
-}
-
-function undoQuickHandlekraft(key) {
-  const m = _getMotiv();
-  const today = todayKey();
-  for (let i = m.log.length - 1; i >= 0; i--) {
-    const e = m.log[i];
-    if (e.area === 'handlekraft' && e.activity === key && e.date === today && e.outcome === 'udfoert') {
-      m.log.splice(i, 1);
-      _saveMotiv(m);
-      showToast(`↩︎ Fortrød ${e.label}`);
-      break;
-    }
-  }
   renderHome();
   const dd = document.getElementById('motivHandlekraft');
   if (dd) dd.classList.add('open');
@@ -3261,6 +2442,79 @@ function _goalCard(g) {
     </div>`;
 }
 
+/* ===================================================================
+   OVERBLIK — samlet dag/uge-score + fordeling + historik-indgang
+   =================================================================== */
+function renderOverblik() {
+  const host = document.getElementById('overblikContent');
+  if (!host) return;
+  const week = getWeekKey();
+  const wk = _getEventLog().filter(e => e.week === week);
+  const dayS = registrerDayScore() + getImpulsScore();
+  const weekS = wk.reduce((s, e) => s + (e.points || 0), 0);
+
+  const catSum = cats => wk.filter(e => cats.includes(e.cat)).reduce((s, e) => s + (e.points || 0), 0);
+  const posSum = wk.filter(e => (e.points || 0) > 0).reduce((s, e) => s + e.points, 0);
+  const negSum = wk.filter(e => (e.points || 0) < 0).reduce((s, e) => s + e.points, 0);
+  const adf = catSum(['adfaerd', 'modstand', 'trov', 'mod']);
+  const maal = catSum(['maal', 'rutine']);
+  const vt = catSum(['vaerktoj']);
+
+  const oc = getOmsorgCounts();
+  const brydeW = _evCount('bryde', 'w');
+  const monsterW = _evCount('monster', 'w');
+  const maxAbs = Math.max(300, Math.abs(posSum), Math.abs(negSum));
+
+  const bar = (label, val, col) => `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+        <span>${label}</span><span style="font-weight:800;color:${col};">${val > 0 ? '+' : ''}${val}</span>
+      </div>
+      <div style="height:7px;border-radius:4px;background:var(--border);overflow:hidden;">
+        <div style="height:100%;width:${Math.min(100, Math.abs(val) / maxAbs * 100)}%;background:${col};"></div>
+      </div>
+    </div>`;
+
+  const tile = (n, l) => `
+    <div style="flex:1;text-align:center;padding:12px 6px;border-radius:12px;background:var(--card2);">
+      <div style="font-size:20px;font-weight:800;">${n}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">${l}</div>
+    </div>`;
+
+  const rems = _getAllRems().filter(r => !r.done && !r.meldtTilbage).length;
+
+  host.innerHTML = `
+    <div class="score-big card" style="background:${dayS > 0 ? 'rgba(16,185,129,0.08)' : dayS < 0 ? 'rgba(239,68,68,0.08)' : 'var(--card)'};border:2px solid ${dayS > 0 ? 'rgba(16,185,129,0.3)' : dayS < 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)'};">
+      <div class="score-number" style="color:${scoreColor(dayS)};">${dayS > 0 ? '+' : ''}${dayS}</div>
+      <div class="score-label">I dag · ugen ${weekS > 0 ? '+' : ''}${weekS}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="font-size:16px;">Ugen fordelt</div>
+      ${bar('Adfærd & samtale', adf, adf < 0 ? 'var(--red)' : 'var(--green)')}
+      ${bar('Mål & rutiner', maal, 'var(--green)')}
+      ${bar('Værktøjer (Holde kursen m.m.)', vt, vt < 0 ? 'var(--red)' : 'var(--green)')}
+      <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+      ${bar('Alle styrker', posSum, 'var(--green)')}
+      ${bar('Alle faldgruber', negSum, 'var(--red)')}
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="font-size:16px;">Denne uge</div>
+      <div style="display:flex;gap:8px;">
+        ${tile(brydeW, 'Bryde tilstand')}
+        ${tile(monsterW, 'Mønster genkendt')}
+        ${tile(oc.gav.w + oc.modtog.w, 'Omsorg gav/modtog')}
+      </div>
+    </div>
+
+    <button class="tool-btn" onclick="goTo('history')" style="margin-bottom:10px;">
+      <span class="tb-ic">📅</span><span class="tb-tx">Historik<span>Dag for dag — hvad trækker op og ned</span></span><span class="tb-ch">›</span>
+    </button>
+    ${rems ? `<button class="tool-btn" onclick="goTo('home')"><span class="tb-ic">⏰</span><span class="tb-tx">${rems} reminder${rems > 1 ? 's' : ''} venter<span>Se dem på Nu-fanen</span></span><span class="tb-ch">›</span></button>` : ''}
+  `;
+}
+
 function renderRegistrer() {
   const host = document.getElementById('registrerContent');
   if (!host) return;
@@ -3330,92 +2584,6 @@ function renderRegistrer() {
       <button onclick="toggleRegistrerCustomize()" style="width:100%;margin-top:12px;padding:10px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;">${_registrerCustomize ? 'Skjul tilpasning' : '⚙️ Tilpas listen'}</button>
     </div>
     ${customize}
-  `;
-}
-
-function renderMotivationCard() {
-  const m = _getMotiv();
-  const activity = _motivActivity || MOTIV_ACTIVITIES[0].key;
-  const act = MOTIV_ACTIVITIES.find(a => a.key === activity);
-
-  const scores = {
-    handlekraft: getMotivWeekScore('handlekraft'),
-    modstandskraft: getMotivWeekScore('modstandskraft'),
-    trovaerdighed: getMotivWeekScore('trovaerdighed'),
-    mod: getMotivWeekScore('mod'),
-  };
-
-  const toggleHeader = (id, icon, title, score) => `
-    <button class="dropdown-toggle" onclick="toggleDropdown('${id}')" style="width:100%;">
-      <span style="font-weight:700;">${icon} ${title}</span>
-      <span style="display:flex;align-items:center;gap:8px;">
-        <span style="font-weight:800;color:${scoreColor(score)};font-size:14px;">${score > 0 ? '+' : ''}${score}</span>
-        <span>▾</span>
-      </span>
-    </button>`;
-
-  const optionBtns = (area, options) => `<div style="padding:12px 4px 4px;">` + options.map(o => `
-    <button onclick="recordMotivOption('${area}','${o.key}')" style="display:block;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:2px solid ${o.points > 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'};background:${o.points > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'};color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px;">
-      ${o.label} &nbsp;<span style="font-weight:800;color:${o.points > 0 ? 'var(--green)' : 'var(--red)'};">${o.points > 0 ? '+' : ''}${o.points}</span>
-    </button>`).join('') + `</div>`;
-
-  document.getElementById('homeMotivationCard').innerHTML = `
-    <div class="card">
-      ${toggleHeader('motivHandlekraft', '🎯', 'Handlekraft – mål', scores.handlekraft)}
-      <div class="dropdown-list" id="motivHandlekraft">
-        <div style="padding:12px 4px 4px;">
-          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-            ${MOTIV_ACTIVITIES.map(a => {
-              const c = getMotivActivityWeekCounts(a.key);
-              const t = getMotivActivityTodayCounts(a.key);
-              const target = m.targets[a.key];
-              const pct = target > 0 ? Math.min(100, Math.round(c.done / target * 100)) : 0;
-              return `
-              <div style="padding:10px 12px;border-radius:10px;background:var(--card2);">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
-                  <span style="font-size:14px;font-weight:600;flex:1;min-width:0;">${a.label}</span>
-                  <span style="display:flex;align-items:center;gap:4px;flex:none;">
-                    <button onclick="undoQuickHandlekraft('${a.key}')" title="Fortryd sidste i dag" ${t.done ? '' : 'disabled'} style="width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;font-weight:700;line-height:1;cursor:${t.done ? 'pointer' : 'default'};opacity:${t.done ? '1' : '.35'};font-family:inherit;">−</button>
-                    <span style="min-width:22px;text-align:center;font-size:14px;font-weight:800;">${t.done}</span>
-                    <button onclick="quickRecordHandlekraft('${a.key}')" title="Registrér udført (+10)" style="width:28px;height:28px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:18px;font-weight:700;line-height:1;cursor:pointer;font-family:inherit;">+</button>
-                  </span>
-                  <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);flex:none;">
-                    ${c.done}/<input type="number" min="0" value="${target}" onchange="setMotivTarget('${a.key}',this.value)" style="width:36px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;text-align:center;">
-                    ${c.dropped ? `<span style="color:var(--red);">· ${c.dropped} droppet</span>` : ''}
-                  </span>
-                </div>
-                <div style="height:6px;border-radius:4px;background:var(--border);overflow:hidden;">
-                  <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--primary)'};"></div>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>
-          <select id="motivActivitySelect" onchange="selectMotivActivity(this.value)" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;margin-bottom:8px;">
-            ${MOTIV_ACTIVITIES.map(a => `<option value="${a.key}" ${a.key===activity?'selected':''}>${a.label}</option>`).join('')}
-          </select>
-          ${act.hasNote ? `<input id="motivNote" type="text" placeholder="Stikord..." style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-family:inherit;margin-bottom:8px;">` : ''}
-          <div style="display:flex;gap:8px;">
-            <button onclick="recordHandlekraft('udfoert')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">✅ Udført <span style="font-weight:400;">+10</span></button>
-            <button onclick="recordHandlekraft('droppet')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--red);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">❌ Droppet <span style="font-weight:400;">−20</span></button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      ${toggleHeader('motivModstand', '🛡️', 'Modstandskraft', scores.modstandskraft)}
-      <div class="dropdown-list" id="motivModstand">${optionBtns('modstandskraft', MODSTAND_OPTIONS)}</div>
-    </div>
-
-    <div class="card">
-      ${toggleHeader('motivTrov', '🤝', 'Troværdighed', scores.trovaerdighed)}
-      <div class="dropdown-list" id="motivTrov">${optionBtns('trovaerdighed', TROV_OPTIONS)}</div>
-    </div>
-
-    <div class="card">
-      ${toggleHeader('motivMod', '🦁', 'Mod', scores.mod)}
-      <div class="dropdown-list" id="motivMod">${optionBtns('mod', MOD_OPTIONS)}</div>
-    </div>
   `;
 }
 
