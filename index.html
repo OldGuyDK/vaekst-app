@@ -322,6 +322,18 @@
     }
     .impuls-overlay.show { display: block; animation: fadeIn 0.2s ease; }
 
+    /* REWARD OVERLAY */
+    .reward-overlay {
+      display: none; position: fixed; inset: 0; z-index: 900;
+      background: rgba(8,8,20,0.92);
+      align-items: center; justify-content: center;
+    }
+    .reward-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+    .reward-overlay img {
+      max-width: 82%; max-height: 72vh; border-radius: 20px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+    }
+
     /* GRIB OVERLAY */
     .grib-overlay {
       display: none; position: fixed; inset: 0;
@@ -462,6 +474,11 @@
   <div id="impulsContent"></div>
 </div>
 
+<!-- REWARD OVERLAY -->
+<div class="reward-overlay" id="rewardOverlay">
+  <img src="reward.jpg" alt="">
+</div>
+
 <!-- OMSORG OVERLAY -->
 <div class="grib-overlay" id="gribOverlay">
   <div class="panic-top">
@@ -567,6 +584,7 @@
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
   <div id="homeMotivationCard"></div>
+  <div id="homeHoldeKursenCard"></div>
   <div id="homeBrydeCard"></div>
   <div class="card" id="homeStopCard"></div>
   <div id="homeScore"></div>
@@ -634,7 +652,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v34';
+const APP_VERSION = 'v40';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -1018,6 +1036,7 @@ function renderHome() {
   `;
 
   renderMotivationCard();
+  renderHoldeKursenCard();
   renderBrydeCard();
 
   const sc = getStopCounts();
@@ -1658,6 +1677,15 @@ function renderCiStep() {
 
   document.getElementById('ciContent').innerHTML = `<div class="step-row">${dots}</div>${body}`;
 
+}
+
+let _rewardTimer = null;
+function showRewardImage() {
+  const el = document.getElementById('rewardOverlay');
+  if (!el) return;
+  clearTimeout(_rewardTimer);
+  el.classList.add('show');
+  _rewardTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
 function toggleDropdown(id) {
@@ -2962,6 +2990,7 @@ function recordMotivOption(area, key) {
   m.log.push({ id: Date.now(), area, date: todayKey(), week: getWeekKey(), key: opt.key, label: opt.label, points: opt.points, ts: Date.now() });
   _saveMotiv(m);
   showToast(`${opt.points > 0 ? '+' : ''}${opt.points} point`);
+  if (area === 'mod' && opt.points > 0) showRewardImage();
   renderHome();
   const ddId = area === 'modstandskraft' ? 'motivModstand' : area === 'trovaerdighed' ? 'motivTrov' : 'motivMod';
   const dd = document.getElementById(ddId);
@@ -2979,6 +3008,41 @@ function getMotivActivityWeekCounts(key) {
   const week = getWeekKey();
   const entries = m.log.filter(e => e.area === 'handlekraft' && e.activity === key && e.week === week);
   return { done: entries.filter(e => e.outcome === 'udfoert').length, dropped: entries.filter(e => e.outcome === 'droppet').length };
+}
+
+function getMotivActivityTodayCounts(key) {
+  const m = _getMotiv();
+  const today = todayKey();
+  const entries = m.log.filter(e => e.area === 'handlekraft' && e.activity === key && e.date === today);
+  return { done: entries.filter(e => e.outcome === 'udfoert').length, dropped: entries.filter(e => e.outcome === 'droppet').length };
+}
+
+function quickRecordHandlekraft(key) {
+  const act = MOTIV_ACTIVITIES.find(a => a.key === key);
+  const m = _getMotiv();
+  m.log.push({ id: Date.now(), area: 'handlekraft', date: todayKey(), week: getWeekKey(), activity: act.key, label: act.label, outcome: 'udfoert', note: '', points: 10, ts: Date.now() });
+  _saveMotiv(m);
+  showToast(`✅ ${act.label} udført · +10 point`);
+  renderHome();
+  const dd = document.getElementById('motivHandlekraft');
+  if (dd) dd.classList.add('open');
+}
+
+function undoQuickHandlekraft(key) {
+  const m = _getMotiv();
+  const today = todayKey();
+  for (let i = m.log.length - 1; i >= 0; i--) {
+    const e = m.log[i];
+    if (e.area === 'handlekraft' && e.activity === key && e.date === today && e.outcome === 'udfoert') {
+      m.log.splice(i, 1);
+      _saveMotiv(m);
+      showToast(`↩︎ Fortrød ${e.label}`);
+      break;
+    }
+  }
+  renderHome();
+  const dd = document.getElementById('motivHandlekraft');
+  if (dd) dd.classList.add('open');
 }
 
 function renderMotivationCard() {
@@ -3015,13 +3079,19 @@ function renderMotivationCard() {
           <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
             ${MOTIV_ACTIVITIES.map(a => {
               const c = getMotivActivityWeekCounts(a.key);
+              const t = getMotivActivityTodayCounts(a.key);
               const target = m.targets[a.key];
               const pct = target > 0 ? Math.min(100, Math.round(c.done / target * 100)) : 0;
               return `
               <div style="padding:10px 12px;border-radius:10px;background:var(--card2);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                  <span style="font-size:14px;font-weight:600;">${a.label}</span>
-                  <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+                  <span style="font-size:14px;font-weight:600;flex:1;min-width:0;">${a.label}</span>
+                  <span style="display:flex;align-items:center;gap:4px;flex:none;">
+                    <button onclick="undoQuickHandlekraft('${a.key}')" title="Fortryd sidste i dag" ${t.done ? '' : 'disabled'} style="width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;font-weight:700;line-height:1;cursor:${t.done ? 'pointer' : 'default'};opacity:${t.done ? '1' : '.35'};font-family:inherit;">−</button>
+                    <span style="min-width:22px;text-align:center;font-size:14px;font-weight:800;">${t.done}</span>
+                    <button onclick="quickRecordHandlekraft('${a.key}')" title="Registrér udført (+10)" style="width:28px;height:28px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:18px;font-weight:700;line-height:1;cursor:pointer;font-family:inherit;">+</button>
+                  </span>
+                  <span style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);flex:none;">
                     ${c.done}/<input type="number" min="0" value="${target}" onchange="setMotivTarget('${a.key}',this.value)" style="width:36px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;text-align:center;">
                     ${c.dropped ? `<span style="color:var(--red);">· ${c.dropped} droppet</span>` : ''}
                   </span>
@@ -3057,6 +3127,110 @@ function renderMotivationCard() {
     <div class="card">
       ${toggleHeader('motivMod', '🦁', 'Mod', scores.mod)}
       <div class="dropdown-list" id="motivMod">${optionBtns('mod', MOD_OPTIONS)}</div>
+    </div>
+  `;
+}
+
+// ---- HOLDE KURSEN ----
+const HOLDE_KURSEN_ITEMS = [
+  { label: 'Tvivler på mig selv', answer: 'Hold fokus på træningen, ikke målet.' },
+  { label: 'Tvivler på ideen', answer: 'Brug kort tid på at analysere ideen — har andre gjort det samme?' },
+  { label: 'Udmattet efter stor indsats', answer: 'Gør noget andet i dag, og sæt tid af til at fortsætte i morgen.' },
+  { label: 'Overvældet på grund af opgavens størrelse', answer: 'Bryd det ned til delmål, der kan nås på dagsbasis — antal kald, materiale del 1, research 1 time.' },
+  { label: 'Ved ikke hvordan jeg skal gribe det an', answer: 'Kig på tidligere planer, justér måske metoden, men hold fast i målet.' },
+  { label: 'Har lyst til at droppe det helt og satse på noget andet', answer: 'Helt naturligt, men kan jeg med stolthed sige jeg har ydet en stor indsats inden jeg gav slip? Viser resultaterne at 300 kald ikke førte nogen vegne?' },
+];
+
+const HOLDE_KURSEN_OUTCOMES = [
+  { key: 'udsat',    label: 'Jeg har udsat projektet for i dag og vælger at gøre noget andet', points: 0 },
+  { key: 'fandtVej', label: 'Jeg arbejdede med udfordringen og fandt vej',                       points: 30 },
+  { key: 'droppet',  label: 'Jeg har droppet ideen og satser nu på noget helt andet. Jeg har ydet en stor indsats og givet det en fair chance', points: -30 },
+  { key: 'lavEnergi', label: 'Jeg har ikke knoklet igennem, men jeg kan mærke at energien ikke er der. Jeg tror ikke nok på ideen/mig selv', points: -20, onlyForFeeling: 5 },
+];
+
+let _holdeKursenSelected = null;
+
+function toggleHoldeKursen(i) {
+  _holdeKursenSelected = (_holdeKursenSelected === i) ? null : i;
+  renderHoldeKursenCard();
+  const dd = document.getElementById('holdeKursenDropdown');
+  if (dd) dd.classList.add('open');
+}
+
+function _getHoldeKursenLog() {
+  const d = getData();
+  if (!d.holdeKursenLog) d.holdeKursenLog = [];
+  return d.holdeKursenLog;
+}
+function _saveHoldeKursenLog(log) { const d = getData(); d.holdeKursenLog = log; setData(d); }
+
+function getHoldeKursenWeekScore() {
+  const week = getWeekKey();
+  return _getHoldeKursenLog().filter(e => e.week === week).reduce((s, e) => s + e.points, 0);
+}
+
+// "Har lyst til at droppe det helt" (index 5) + rent faktisk dropper = et bevidst, velovervejet valg — ikke et nederlag
+function _holdeKursenOutcomePoints(outcomeKey, feelingIndex) {
+  const outcome = HOLDE_KURSEN_OUTCOMES.find(o => o.key === outcomeKey);
+  if (outcomeKey === 'droppet' && feelingIndex === 5) return 15;
+  return outcome.points;
+}
+
+function recordHoldeKursenOutcome(key) {
+  if (_holdeKursenSelected === null) return;
+  const feelingIndex = _holdeKursenSelected;
+  const feeling = HOLDE_KURSEN_ITEMS[feelingIndex];
+  const outcome = HOLDE_KURSEN_OUTCOMES.find(o => o.key === key);
+  const points = _holdeKursenOutcomePoints(key, feelingIndex);
+
+  const log = _getHoldeKursenLog();
+  log.push({ id: Date.now(), date: todayKey(), week: getWeekKey(), feeling: feeling.label, outcome: outcome.label, points, ts: Date.now() });
+  _saveHoldeKursenLog(log);
+  showToast(`${points > 0 ? '+' : ''}${points} point`);
+  if (points > 0) showRewardImage();
+  _holdeKursenSelected = null;
+  renderHome();
+  const dd = document.getElementById('holdeKursenDropdown');
+  if (dd) dd.classList.add('open');
+}
+
+function renderHoldeKursenCard() {
+  const hasSelection = _holdeKursenSelected !== null;
+  const weekScore = getHoldeKursenWeekScore();
+  document.getElementById('homeHoldeKursenCard').innerHTML = `
+    <div class="card">
+      <button class="dropdown-toggle ${hasSelection ? 'has-selection' : ''}" onclick="toggleDropdown('holdeKursenDropdown')" style="width:100%;">
+        <span style="font-weight:700;">🧭 Holde kursen</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:800;color:${scoreColor(weekScore)};font-size:14px;">${weekScore > 0 ? '+' : ''}${weekScore}</span>
+          <span>▾</span>
+        </span>
+      </button>
+      <div class="dropdown-list" id="holdeKursenDropdown">
+        ${HOLDE_KURSEN_ITEMS.map((item, i) => `
+          <div class="dropdown-opt ${_holdeKursenSelected === i ? 'on' : ''}" onclick="toggleHoldeKursen(${i})">
+            <div class="dropdown-opt-circle">${_holdeKursenSelected === i ? '✓' : ''}</div>
+            <span>${item.label}</span>
+          </div>`).join('')}
+      </div>
+      ${hasSelection ? `
+        <div style="margin-top:12px;padding:14px;border-radius:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);font-size:14px;line-height:1.5;">
+          ${HOLDE_KURSEN_ITEMS[_holdeKursenSelected].answer}
+        </div>
+        <div style="margin-top:14px;">
+          <div class="card-sub" style="margin-bottom:8px;">Hvad gjorde du?</div>
+          ${HOLDE_KURSEN_OUTCOMES.filter(o => o.onlyForFeeling === undefined || o.onlyForFeeling === _holdeKursenSelected).map(o => {
+            const points = _holdeKursenOutcomePoints(o.key, _holdeKursenSelected);
+            const posBorder = 'rgba(16,185,129,0.4)', posBg = 'rgba(16,185,129,0.08)';
+            const negBorder = 'rgba(239,68,68,0.4)', negBg = 'rgba(239,68,68,0.08)';
+            const border = points > 0 ? posBorder : points < 0 ? negBorder : 'var(--border)';
+            const bg = points > 0 ? posBg : points < 0 ? negBg : 'var(--card2)';
+            const color = points > 0 ? 'var(--green)' : points < 0 ? 'var(--red)' : 'var(--muted)';
+            return `<button onclick="recordHoldeKursenOutcome('${o.key}')" style="display:block;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:2px solid ${border};background:${bg};color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px;">
+              ${o.label} &nbsp;<span style="font-weight:800;color:${color};">${points > 0 ? '+' : ''}${points}</span>
+            </button>`;
+          }).join('')}
+        </div>` : ''}
     </div>
   `;
 }
