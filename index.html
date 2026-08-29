@@ -545,7 +545,7 @@
   <div style="position:absolute;top:14px;left:0;right:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
   <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
   <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
-  <button class="fab" style="background:var(--green);" onclick="openAdfaerd()">🎯<span class="fab-label">ADFÆRD</span></button>
+  <button class="fab" style="background:var(--green);" onclick="goTo('registrer')">✍️<span class="fab-label">REGISTRÉR</span></button>
   <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
 </div>
 
@@ -563,8 +563,7 @@
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-btn active" id="nb-home" onclick="goTo('home')"><span class="nav-icon">🏠</span><span>Hjem</span></button>
-  <button class="nav-btn" id="nb-checkin" onclick="goTo('checkin')" style="display:none;"><span class="nav-icon">✏️</span><span>Check-in</span></button>
-  <button class="nav-btn" id="nb-daily" onclick="goTo('daily')" style="display:none;"><span class="nav-icon">📊</span><span>Dagsoversigt</span></button>
+  <button class="nav-btn" id="nb-registrer" onclick="goTo('registrer')"><span class="nav-icon">✍️</span><span>Registrér</span></button>
   <button class="nav-btn" id="nb-history" onclick="goTo('history')"><span class="nav-icon">📅</span><span>Historik</span></button>
 </nav>
 
@@ -583,11 +582,18 @@
     <div id="homeDailyContent"></div>
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
-  <div id="homeMotivationCard"></div>
   <div id="homeHoldeKursenCard"></div>
   <div id="homeBrydeCard"></div>
-  <div class="card" id="homeStopCard"></div>
   <div id="homeScore"></div>
+</div>
+
+<!-- REGISTRÉR -->
+<div class="view" id="view-registrer">
+  <div class="page-header">
+    <h1>Registrér</h1>
+    <p>Ét tryk = logget</p>
+  </div>
+  <div id="registrerContent"></div>
 </div>
 
 <!-- CHECK-IN -->
@@ -652,7 +658,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v40';
+const APP_VERSION = 'v41';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -838,7 +844,7 @@ function calcTodayTotal() {
   const entries = getEntries().filter(e => e.date === today);
   const ciScore = entries.reduce((sum, e) => sum + calcEntryScore(e), 0);
   const daily = getDailies()[today];
-  return ciScore + calcDailyScore(daily) + getImpulsScore() + getAdfaerdScore();
+  return ciScore + calcDailyScore(daily) + getImpulsScore() + registrerDayScore();
 }
 
 function scoreStyle(score) {
@@ -858,8 +864,9 @@ function goTo(name, session) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
-  document.getElementById('nb-' + name).classList.add('active');
-  const renders = { home: renderHome, checkin: () => renderCheckin(session), daily: initDaily, history: renderHistory, gpt: renderGpt };
+  const nb = document.getElementById('nb-' + name);
+  if (nb) nb.classList.add('active');
+  const renders = { home: renderHome, registrer: renderRegistrer, checkin: () => renderCheckin(session), daily: initDaily, history: renderHistory, gpt: renderGpt };
   renders[name] && renders[name]();
 }
 
@@ -1035,99 +1042,8 @@ function renderHome() {
     </div>
   `;
 
-  renderMotivationCard();
   renderHoldeKursenCard();
   renderBrydeCard();
-
-  const sc = getStopCounts();
-  const ac = getAdfaerdCounts();
-  const oc = getOmsorgCounts();
-  const adfScore = getAdfaerdScore();
-  const sep = `<span style="color:var(--muted);font-size:14px;font-weight:400;"> – </span>`;
-  document.getElementById('homeStopCard').innerHTML = `
-    <button class="dropdown-toggle" onclick="toggleDropdown('adfaerdDropdown')" style="width:100%;">
-      <span style="font-weight:700;">💪 Adfærdskontrol</span>
-      <span style="display:flex;align-items:center;gap:8px;">
-        <span style="font-weight:800;color:${scoreColor(adfScore)};font-size:14px;">${adfScore > 0 ? '+' : ''}${adfScore}</span>
-        <span>▾</span>
-      </span>
-    </button>
-    <div class="dropdown-list" id="adfaerdDropdown">
-    <div style="font-size:11px;color:var(--muted);text-align:right;margin:10px 0 6px;">dag &nbsp;–&nbsp; uge</div>
-
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;padding:0 4px;">OMSORG</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;padding:0 4px;">
-      <div style="text-align:center;padding:10px 6px;background:rgba(59,130,246,0.08);border-radius:12px;border:1px solid rgba(59,130,246,0.2);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">🤝 Modtog</div>
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">${oc.modtog.d}${sep}${oc.modtog.w}</div>
-      </div>
-      <div style="text-align:center;padding:10px 6px;background:rgba(16,185,129,0.08);border-radius:12px;border:1px solid rgba(16,185,129,0.2);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">💚 Gav</div>
-        <div style="font-size:22px;font-weight:800;color:var(--green);">${oc.gav.d}${sep}${oc.gav.w}</div>
-      </div>
-    </div>
-
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:0.05em;padding:0 4px;">ADFÆRD</div>
-    <div style="display:flex;flex-direction:column;gap:6px;padding:0 4px 12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🟢 Nærværende</span>
-        <span style="font-size:16px;font-weight:800;color:var(--green);">${ac.naervaerende.d}${sep}${ac.naervaerende.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(245,158,11,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🟡 Lyttende passiv</span>
-        <span style="font-size:16px;font-weight:800;color:var(--yellow);">${ac.lyttende.d}${sep}${ac.lyttende.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(59,130,246,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🔵 Voksen</span>
-        <span style="font-size:16px;font-weight:800;color:var(--primary);">${ac.voksen.d}${sep}${ac.voksen.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(100,116,139,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">⚪ Indre barn</span>
-        <span style="font-size:16px;font-weight:800;color:var(--muted);">${ac.indreBarn.d}${sep}${ac.indreBarn.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(139,92,246,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🛑 Standsede automatadfærd</span>
-        <span style="font-size:16px;font-weight:800;color:#8b5cf6;">${ac.standsede.d}${sep}${ac.standsede.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🚫 Afbrød samtale</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.afbroed.d}${sep}${ac.afbroed.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">😤 Vrissede</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.vrissede.d}${sep}${ac.vrissede.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">⚡ Gik for hurtigt frem</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.forHurtigt.d}${sep}${ac.forHurtigt.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🔴 Lukkede ned i samtale</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lukket.d}${sep}${ac.lukket.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🫥 Greb hende ikke mentalt</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.grebIkke.d}${sep}${ac.grebIkke.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">📅 Var ikke på forkant</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.ikkeForKant.d}${sep}${ac.ikkeForKant.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">💬 Lagde ord i munden</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.lagdeOrdIMunden.d}${sep}${ac.lagdeOrdIMunden.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">😟 Usikkerhed holdt mig tilbage</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.usikkerhedTilbage.d}${sep}${ac.usikkerhedTilbage.w}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:10px;">
-        <span style="font-size:13px;font-weight:600;">🔁 Usikkerhed gentog gammelt mønster</span>
-        <span style="font-size:16px;font-weight:800;color:var(--red);">${ac.usikkerhedGentog.d}${sep}${ac.usikkerhedGentog.w}</span>
-      </div>
-    </div>
-    </div>
-  `;
 
   const daily = getDailies()[today];
   if (daily && ((daily.myStates && daily.myStates.length) || (daily.herStates && daily.herStates.length))) {
@@ -2945,6 +2861,7 @@ function getStopCounts() {
 function _getMotiv() {
   const d = getData();
   if (!d.motiv) d.motiv = { targets: {}, log: [] };
+  if (!d.motiv.goals) d.motiv.goals = [];
   MOTIV_ACTIVITIES.forEach(a => { if (d.motiv.targets[a.key] === undefined) d.motiv.targets[a.key] = 3; });
   return d.motiv;
 }
@@ -2954,6 +2871,7 @@ function setMotivTarget(key, value) {
   const m = _getMotiv();
   m.targets[key] = Math.max(0, parseInt(value, 10) || 0);
   _saveMotiv(m);
+  renderRegistrer();
   renderHome();
   const dd = document.getElementById('motivHandlekraft');
   if (dd) dd.classList.add('open');
@@ -3043,6 +2961,350 @@ function undoQuickHandlekraft(key) {
   renderHome();
   const dd = document.getElementById('motivHandlekraft');
   if (dd) dd.classList.add('open');
+}
+
+/* ===================================================================
+   REGISTRÉR — samlet logning (Stage 1)
+   Slår Adfærd + Modstandskraft + Troværdighed + Mod + Mål/rutiner
+   sammen til én flad liste. Skriver til getData().eventLog.
+   =================================================================== */
+
+const LOG_ITEMS = [
+  { key: 'oms_gav',    label: '💚 Gav omsorg',    points: 0, cat: 'omsorg', group: 'styrke', omsorg: 'gav' },
+  { key: 'oms_modtog', label: '🤝 Modtog omsorg', points: 0, cat: 'omsorg', group: 'styrke', omsorg: 'modtog' },
+];
+ADFAERD_TYPES.forEach(t => LOG_ITEMS.push({
+  key: 'adf_' + t.type, label: t.label, points: t.score, cat: 'adfaerd',
+  group: t.score > 0 ? 'styrke' : t.score < 0 ? 'faldgrube' : 'neutral'
+}));
+MODSTAND_OPTIONS.forEach(o => LOG_ITEMS.push({
+  key: 'mods_' + o.key, label: o.label, points: o.points, cat: 'modstand',
+  group: o.points >= 0 ? 'styrke' : 'faldgrube'
+}));
+TROV_OPTIONS.forEach(o => LOG_ITEMS.push({
+  key: 'trov_' + o.key, label: o.label, points: o.points, cat: 'trov',
+  group: o.points >= 0 ? 'styrke' : 'faldgrube'
+}));
+MOD_OPTIONS.forEach(o => LOG_ITEMS.push({
+  key: 'mod_' + o.key, label: o.label, points: o.points, cat: 'mod',
+  group: o.points >= 0 ? 'styrke' : 'faldgrube'
+}));
+LOG_ITEMS.push({ key: 'tilstand_voksen', label: '🧠 Jeg var i voksen', points: 0, cat: 'tilstand', group: 'neutral' });
+LOG_ITEMS.push({ key: 'tilstand_barn',   label: '👶 Jeg gik i barn',    points: 0, cat: 'tilstand', group: 'neutral' });
+
+function _logItem(key) { return LOG_ITEMS.find(i => i.key === key); }
+
+function _seedEventLog(d) {
+  const out = [];
+  (d.adfaerd || []).forEach(e => out.push({
+    key: 'adf_' + e.type, label: e.label || '', points: e.score || 0, cat: 'adfaerd',
+    date: e.date, week: e.week, ts: e.ts || Date.now()
+  }));
+  ((d.motiv && d.motiv.log) || []).forEach(e => {
+    const map = { modstandskraft: 'mods_', trovaerdighed: 'trov_', mod: 'mod_' };
+    if (map[e.area]) out.push({
+      key: map[e.area] + e.key, label: e.label || '', points: e.points || 0,
+      cat: e.area === 'modstandskraft' ? 'modstand' : e.area, date: e.date, week: e.week, ts: e.ts || Date.now()
+    });
+    else if (e.area === 'handlekraft' && e.activity && e.outcome === 'udfoert') out.push({
+      key: 'rut_' + e.activity, label: e.label || '', points: e.points || 10, cat: 'rutine',
+      date: e.date, week: e.week, ts: e.ts || Date.now()
+    });
+  });
+  return out;
+}
+function _getEventLog() {
+  const d = getData();
+  if (!d.eventLog) { d.eventLog = _seedEventLog(d); setData(d); }
+  return d.eventLog;
+}
+function _saveEventLog(log) { const d = getData(); d.eventLog = log; setData(d); }
+
+function _evCount(key, period) {
+  const k = period === 'd' ? todayKey() : getWeekKey();
+  const f = period === 'd' ? 'date' : 'week';
+  return _getEventLog().filter(e => e.key === key && e[f] === k).length;
+}
+function _rowCounts(it) {
+  if (it.omsorg) { const oc = getOmsorgCounts(); return { d: oc[it.omsorg].d, w: oc[it.omsorg].w }; }
+  return { d: _evCount(it.key, 'd'), w: _evCount(it.key, 'w') };
+}
+
+function logEvent(key) {
+  const it = _logItem(key);
+  if (!it) return;
+  if (it.omsorg) { addOmsorg(it.omsorg); renderRegistrer(); return; }
+  const log = _getEventLog();
+  log.push({ key, label: it.label, points: it.points || 0, cat: it.cat, date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  _saveEventLog(log);
+  const p = it.points || 0;
+  const name = it.label.replace(/^\S+\s/, '');
+  showToast(p ? `${name} · ${p > 0 ? '+' : ''}${p}` : `${name} · registreret`);
+  if (p > 0) showRewardImage();
+  renderRegistrer();
+}
+function undoLog(key) {
+  const it = _logItem(key);
+  if (it && it.omsorg) { removeOmsorg(it.omsorg); renderRegistrer(); return; }
+  const log = _getEventLog();
+  const today = todayKey();
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].key === key && log[i].date === today) { log.splice(i, 1); break; }
+  }
+  _saveEventLog(log);
+  renderRegistrer();
+}
+
+function registrerDayScore() {
+  const today = todayKey();
+  return _getEventLog().filter(e => e.date === today).reduce((s, e) => s + (e.points || 0), 0);
+}
+function registrerWeekScore() {
+  const week = getWeekKey();
+  return _getEventLog().filter(e => e.week === week).reduce((s, e) => s + (e.points || 0), 0);
+}
+
+/* ---- tilpas listen (skjul punkter) ---- */
+function _getLogHidden() { return getData().logHidden || []; }
+function toggleLogHidden(key) {
+  const d = getData();
+  const h = d.logHidden || [];
+  const i = h.indexOf(key);
+  if (i >= 0) h.splice(i, 1); else h.push(key);
+  d.logHidden = h; setData(d);
+  renderRegistrer();
+}
+let _registrerCustomize = false;
+function toggleRegistrerCustomize() { _registrerCustomize = !_registrerCustomize; renderRegistrer(); }
+
+/* ---- rutiner (Yoga, Chant, …) ---- */
+function quickRecordRoutine(key) {
+  const act = MOTIV_ACTIVITIES.find(a => a.key === key);
+  const log = _getEventLog();
+  log.push({ key: 'rut_' + key, label: act.label, points: 10, cat: 'rutine', date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  _saveEventLog(log);
+  showToast(`✅ ${act.label} · +10`);
+  showRewardImage();
+  renderRegistrer();
+}
+function undoRoutine(key) {
+  const log = _getEventLog();
+  const today = todayKey();
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].key === 'rut_' + key && log[i].date === today) { log.splice(i, 1); break; }
+  }
+  _saveEventLog(log);
+  renderRegistrer();
+}
+
+/* ---- egne mål (op til 3, trin med stikord) ---- */
+function _findGoal(m, id) { return m.goals.find(g => g.id === id); }
+function addGoalDraft() {
+  const m = _getMotiv();
+  if (m.goals.length >= 3) return;
+  m.goals.push({ id: Date.now(), title: '', steps: ['', ''], done: 0, editing: true });
+  _saveMotiv(m); renderRegistrer();
+}
+function goalSetTitle(id, v) { const m = _getMotiv(); const g = _findGoal(m, id); if (g) { g.title = v; _saveMotiv(m); } }
+function goalSetStep(id, i, v) { const m = _getMotiv(); const g = _findGoal(m, id); if (g) { g.steps[i] = v; _saveMotiv(m); } }
+function goalAddStep(id) { const m = _getMotiv(); const g = _findGoal(m, id); if (g) { g.steps.push(''); _saveMotiv(m); renderRegistrer(); } }
+function goalRemoveStep(id, i) {
+  const m = _getMotiv(); const g = _findGoal(m, id);
+  if (!g) return;
+  g.steps.splice(i, 1);
+  if (g.done > g.steps.length) g.done = g.steps.length;
+  _saveMotiv(m); renderRegistrer();
+}
+function goalEdit(id) { const m = _getMotiv(); const g = _findGoal(m, id); if (g) { g.editing = true; _saveMotiv(m); renderRegistrer(); } }
+function goalSave(id) {
+  const m = _getMotiv(); const g = _findGoal(m, id);
+  if (!g) return;
+  g.steps = g.steps.map(s => s.trim()).filter(Boolean);
+  if (!g.steps.length) g.steps = [''];
+  if (g.done > g.steps.length) g.done = g.steps.length;
+  g.editing = false;
+  _saveMotiv(m); renderRegistrer();
+}
+function goalDelete(id) {
+  const m = _getMotiv();
+  m.goals = m.goals.filter(g => g.id !== id);
+  _saveMotiv(m);
+  const log = _getEventLog().filter(e => e.key !== 'goal_' + id && e.key !== 'goal_' + id + '_done');
+  _saveEventLog(log);
+  renderRegistrer();
+}
+function goalAdvance(id) {
+  const m = _getMotiv(); const g = _findGoal(m, id);
+  if (!g || g.done >= g.steps.length) return;
+  const stepLabel = g.steps[g.done];
+  g.done++;
+  _saveMotiv(m);
+  const log = _getEventLog();
+  log.push({ key: 'goal_' + id, label: '🎯 ' + g.title + ' · ' + stepLabel, points: 10, cat: 'maal', date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  const complete = g.done >= g.steps.length;
+  if (complete) log.push({ key: 'goal_' + id + '_done', label: '🎯 ' + g.title + ' fuldført', points: 20, cat: 'maal', date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  _saveEventLog(log);
+  showToast(complete ? `🎉 ${g.title} fuldført · +30` : `+10 · ${stepLabel}`);
+  showRewardImage();
+  renderRegistrer();
+}
+function goalUndo(id) {
+  const m = _getMotiv(); const g = _findGoal(m, id);
+  if (!g || g.done <= 0) return;
+  g.done--;
+  _saveMotiv(m);
+  const log = _getEventLog();
+  for (let i = log.length - 1; i >= 0; i--) { if (log[i].key === 'goal_' + id + '_done') { log.splice(i, 1); break; } }
+  for (let i = log.length - 1; i >= 0; i--) { if (log[i].key === 'goal_' + id) { log.splice(i, 1); break; } }
+  _saveEventLog(log);
+  renderRegistrer();
+}
+
+/* ---- render ---- */
+const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+function _logRow(it) {
+  const c = _rowCounts(it);
+  const pos = (it.points || 0) > 0 || (it.omsorg);
+  const neg = (it.points || 0) < 0;
+  const col = neg ? 'var(--red)' : pos ? 'var(--green)' : 'var(--muted)';
+  const meta = it.points ? `${it.points > 0 ? '+' : ''}${it.points}` : '';
+  return `
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--card2);margin-bottom:6px;">
+      <span style="flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.35;">${it.label}
+        ${meta ? `<span style="font-weight:400;font-size:11px;color:var(--muted);"> · ${meta}</span>` : ''}
+        ${c.w ? `<span style="font-weight:400;font-size:11px;color:var(--muted);"> · uge ${c.w}</span>` : ''}
+      </span>
+      <button onclick="undoLog('${it.key}')" ${c.d ? '' : 'disabled'} style="width:28px;height:28px;flex:none;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:15px;line-height:1;font-family:inherit;cursor:${c.d ? 'pointer' : 'default'};opacity:${c.d ? '1' : '.35'};">−</button>
+      <span style="min-width:22px;text-align:center;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:${c.d ? col : 'var(--muted)'};">${c.d}</span>
+      <button onclick="logEvent('${it.key}')" style="width:28px;height:28px;flex:none;border-radius:8px;border:none;background:${neg ? 'var(--red)' : 'var(--green)'};color:#fff;font-size:17px;line-height:1;font-family:inherit;cursor:pointer;">+</button>
+    </div>`;
+}
+
+function _goalCard(g) {
+  const total = g.steps.length;
+  const complete = total > 0 && g.done >= total;
+  const pct = total > 0 ? Math.round(g.done / total * 100) : 0;
+
+  if (g.editing) {
+    return `
+    <div style="padding:14px;border-radius:12px;background:var(--card2);border:1px solid var(--border);margin-bottom:8px;">
+      <input value="${_esc(g.title)}" onchange="goalSetTitle(${g.id},this.value)" placeholder="Overskrift for målet"
+        style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-weight:700;padding:9px 11px;font-family:inherit;margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Trin — ét stikord pr. linje (+10 point pr. trin, +20 når målet er fuldført)</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+        ${g.steps.map((s, i) => `
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:var(--muted);width:16px;text-align:right;flex:none;">${i + 1}</span>
+            <input value="${_esc(s)}" onchange="goalSetStep(${g.id},${i},this.value)" placeholder="Hvad er trin ${i + 1}?"
+              style="flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:7px 9px;font-family:inherit;">
+            <button onclick="goalRemoveStep(${g.id},${i})" style="flex:none;width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;line-height:1;font-family:inherit;cursor:pointer;">×</button>
+          </div>`).join('')}
+      </div>
+      <button onclick="goalAddStep(${g.id})" style="width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;margin-bottom:12px;">+ Tilføj trin</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="goalSave(${g.id})" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Gem mål</button>
+        <button onclick="goalDelete(${g.id})" style="flex:none;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Slet</button>
+      </div>
+    </div>`;
+  }
+
+  const next = !complete ? g.steps[g.done] : null;
+  const rows = g.steps.map((s, i) => {
+    const done = i < g.done, isNext = i === g.done;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+      <span style="width:18px;height:18px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;background:${done ? 'var(--green)' : 'transparent'};border:${done ? 'none' : isNext ? '2px solid var(--primary)' : '1px solid var(--border)'};color:#fff;">${done ? '✓' : ''}</span>
+      <span style="font-size:13px;flex:1;color:${done ? 'var(--muted)' : isNext ? 'var(--text)' : 'var(--muted)'};text-decoration:${done ? 'line-through' : 'none'};font-weight:${isNext ? '700' : '400'};">${_esc(s)}${isNext ? ` <span style="color:var(--primary);font-weight:700;">← næste</span>` : ''}</span>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="padding:14px;border-radius:12px;background:var(--card2);border:1px solid ${complete ? 'var(--green)' : 'var(--border)'};margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:16px;">${complete ? '✅' : '🎯'}</span>
+        <span style="flex:1;min-width:0;font-size:15px;font-weight:700;">${_esc(g.title) || 'Uden titel'}</span>
+        <button onclick="goalEdit(${g.id})" style="flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:13px;line-height:1;font-family:inherit;cursor:pointer;">✎</button>
+      </div>
+      <div style="font-size:12px;color:${complete ? 'var(--green)' : 'var(--muted)'};font-weight:700;margin-bottom:8px;">${g.done}/${total} trin${complete ? ' · fuldført' : next ? ' · næste: ' + _esc(next) : ''}</div>
+      <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden;margin-bottom:10px;"><div style="height:100%;width:${pct}%;background:${complete ? 'var(--green)' : 'var(--primary)'};"></div></div>
+      <div style="margin-bottom:12px;">${rows}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="goalUndo(${g.id})" ${g.done <= 0 ? 'disabled' : ''} style="flex:none;width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:20px;font-weight:700;font-family:inherit;cursor:${g.done <= 0 ? 'default' : 'pointer'};opacity:${g.done <= 0 ? '.35' : '1'};">−</button>
+        <button onclick="goalAdvance(${g.id})" ${complete ? 'disabled' : ''} style="flex:1;height:38px;border-radius:10px;border:none;background:${complete ? 'var(--border)' : 'var(--green)'};color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:${complete ? 'default' : 'pointer'};">${complete ? 'Alle trin klaret' : '+ Gennemført: ' + _esc(g.steps[g.done])}</button>
+      </div>
+    </div>`;
+}
+
+function renderRegistrer() {
+  const host = document.getElementById('registrerContent');
+  if (!host) return;
+  const m = _getMotiv();
+  const hidden = _getLogHidden();
+  const dayS = registrerDayScore();
+  const weekS = registrerWeekScore();
+
+  const routineRow = a => {
+    const dCount = _evCount('rut_' + a.key, 'd');
+    const wCount = _evCount('rut_' + a.key, 'w');
+    const target = m.targets[a.key] || 0;
+    const pct = target > 0 ? Math.min(100, Math.round(wCount / target * 100)) : 0;
+    return `
+      <div style="padding:10px 12px;border-radius:11px;background:var(--card2);margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="flex:1;min-width:0;font-size:14px;font-weight:600;">${a.label}</span>
+          <button onclick="undoRoutine('${a.key}')" ${dCount ? '' : 'disabled'} style="width:28px;height:28px;flex:none;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:15px;line-height:1;font-family:inherit;cursor:${dCount ? 'pointer' : 'default'};opacity:${dCount ? '1' : '.35'};">−</button>
+          <span style="min-width:22px;text-align:center;font-size:14px;font-weight:800;">${dCount}</span>
+          <button onclick="quickRecordRoutine('${a.key}')" style="width:28px;height:28px;flex:none;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:17px;line-height:1;font-family:inherit;cursor:pointer;">+</button>
+          <span style="font-size:12px;color:var(--muted);flex:none;">uge ${wCount}/<input type="number" min="0" value="${target}" onchange="setMotivTarget('${a.key}',this.value)" style="width:34px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-family:inherit;text-align:center;"></span>
+        </div>
+        <div style="height:6px;border-radius:4px;background:var(--border);overflow:hidden;"><div style="height:100%;width:${pct}%;background:${pct >= 100 ? 'var(--green)' : 'var(--primary)'};"></div></div>
+      </div>`;
+  };
+
+  const visible = g => LOG_ITEMS.filter(i => i.group === g && !hidden.includes(i.key));
+  const listBlock = (title, colorVar, items) => items.length ? `
+    <div style="font-size:12px;font-weight:700;color:${colorVar};letter-spacing:.04em;margin:14px 0 6px;">${title}</div>
+    ${items.map(_logRow).join('')}` : '';
+
+  const customize = _registrerCustomize ? `
+    <div class="card" style="background:var(--card2);">
+      <div class="card-title" style="font-size:15px;">Tilpas listen</div>
+      <div class="card-sub">Fjern flueben ved det du ikke bruger — så bliver listen kortere.</div>
+      ${['styrke', 'faldgrube', 'neutral'].map(gr => LOG_ITEMS.filter(i => i.group === gr).map(i => {
+        const on = !hidden.includes(i.key);
+        return `<div onclick="toggleLogHidden('${i.key}')" style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;">
+          <span style="width:20px;height:20px;flex:none;border-radius:6px;border:2px solid ${on ? 'var(--primary)' : 'var(--border)'};background:${on ? 'var(--primary)' : 'transparent'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;">${on ? '✓' : ''}</span>
+          <span style="font-size:13px;">${i.label}</span>
+        </div>`;
+      }).join('')).join('')}
+      <button onclick="toggleRegistrerCustomize()" style="width:100%;margin-top:12px;padding:10px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Færdig</button>
+    </div>` : '';
+
+  host.innerHTML = `
+    <div class="score-big card" style="background:${dayS > 0 ? 'rgba(16,185,129,0.08)' : dayS < 0 ? 'rgba(239,68,68,0.08)' : 'var(--card)'};border:2px solid ${dayS > 0 ? 'rgba(16,185,129,0.3)' : dayS < 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)'};">
+      <div class="score-number" style="color:${scoreColor(dayS)};">${dayS > 0 ? '+' : ''}${dayS}</div>
+      <div class="score-label">I dag · ugen ${weekS > 0 ? '+' : ''}${weekS}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="font-size:16px;">🎯 Mål &amp; rutiner</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:6px;">MINE MÅL <span style="font-weight:400;">· løber til de er færdige</span></div>
+      ${m.goals.map(_goalCard).join('') || '<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Ingen mål endnu.</div>'}
+      ${m.goals.length < 3 ? `<button onclick="addGoalDraft()" style="width:100%;padding:11px;border-radius:11px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;margin-bottom:6px;">+ Tilføj mål (${m.goals.length}/3)</button>` : ''}
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:14px 0 6px;">RUTINER <span style="font-weight:400;">· nulstilles hver uge</span></div>
+      ${MOTIV_ACTIVITIES.map(routineRow).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="font-size:16px;">✍️ Log</div>
+      <div class="card-sub" style="margin-bottom:0;">Ét tryk registrerer. Tryk − for at fortryde dagens seneste.</div>
+      ${listBlock('STYRKER', 'var(--green)', visible('styrke'))}
+      ${listBlock('FALDGRUBER', 'var(--red)', visible('faldgrube'))}
+      ${listBlock('TILSTAND', 'var(--muted)', visible('neutral'))}
+      <button onclick="toggleRegistrerCustomize()" style="width:100%;margin-top:12px;padding:10px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;">${_registrerCustomize ? 'Skjul tilpasning' : '⚙️ Tilpas listen'}</button>
+    </div>
+    ${customize}
+  `;
 }
 
 function renderMotivationCard() {
