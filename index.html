@@ -620,7 +620,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v43';
+const APP_VERSION = 'v44';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2854,6 +2854,30 @@ async function requestNotifPermission() {
     checkUpcomingReminders();
   }
 }
+
+// Engangs-nulstilling af alle tællere/log/score — beholder mål, rutine-ugemål,
+// reminders og På forkant-opsætning. Kører én gang pr. enhed.
+(function resetCounters() {
+  const d = getData();
+  if (d._resetCounters1) return;
+  d.eventLog = [];
+  d.omsorg = [];
+  d.adfaerd = [];
+  d.stops = [];
+  d.bryde = { active: null, log: [] };
+  d.holdeKursenLog = [];
+  d.impulses = [];
+  d.impulsScore = {};
+  d.panic = [];
+  d.entries = [];
+  d.dailies = {};
+  if (d.motiv) {
+    d.motiv.log = [];
+    (d.motiv.goals || []).forEach(g => { g.done = 0; });
+  }
+  d._resetCounters1 = true;
+  setData(d);
+})();
 
 renderHome();
 
