@@ -26,8 +26,15 @@
       min-height: 100vh; max-width: 480px; margin: 0 auto; overflow-x: hidden;
     }
 
-    .view { display: none; padding: 140px 16px 90px; min-height: 100vh; animation: fadeIn 0.2s ease; }
+    .view { display: none; padding: 24px 16px 96px; min-height: 100vh; animation: fadeIn 0.2s ease; }
     .view.active { display: block; }
+    .tool-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+    .tool-btn:active { transform: scale(0.99); }
+    .tool-btn .tb-ic { font-size: 20px; flex: none; }
+    .tool-btn .tb-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .tool-btn .tb-tx span { font-size: 11px; font-weight: 400; color: var(--muted); }
+    .tool-btn .tb-ch { margin-left: auto; color: var(--muted); font-size: 18px; }
+    .section-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; margin: 4px 4px 8px; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes overdueFlash { 0%,100% { border-color: rgba(239,68,68,0.4); } 50% { border-color: rgba(239,68,68,1); } }
     .overdue-card { animation: overdueFlash 1.8s ease-in-out infinite; border: 2px solid rgba(239,68,68,0.6) !important; background: rgba(239,68,68,0.06) !important; }
@@ -540,14 +547,8 @@
   <div id="moensterContent"></div>
 </div>
 
-<!-- FAB BAR -->
-<div class="fab-bar">
-  <div style="position:absolute;top:14px;left:0;right:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;">Personal tracker</div>
-  <button class="fab" style="background:#8b5cf6;" onclick="openImpuls()">💡<span class="fab-label">IMPULS</span></button>
-  <button class="fab" style="background:var(--primary);" onclick="openGrib()">🤝<span class="fab-label">OMSORG</span></button>
-  <button class="fab" style="background:var(--green);" onclick="goTo('registrer')">✍️<span class="fab-label">REGISTRÉR</span></button>
-  <button class="fab" style="background:var(--red);" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span class="fab-label">PANIK</span></button>
-</div>
+<!-- PANIK KNAP -->
+<button class="panic-fab" onclick="openPanic()"><span style="background:#fff;color:var(--red);font-size:11px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:1px;">SOS</span><span>PANIK</span></button>
 
 <!-- EXPIRED REMINDERS MODAL -->
 <div class="panic-overlay" id="expiredModal">
@@ -562,7 +563,7 @@
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <button class="nav-btn active" id="nb-home" onclick="goTo('home')"><span class="nav-icon">🏠</span><span>Hjem</span></button>
+  <button class="nav-btn active" id="nb-home" onclick="goTo('home')"><span class="nav-icon">⚡</span><span>Nu</span></button>
   <button class="nav-btn" id="nb-registrer" onclick="goTo('registrer')"><span class="nav-icon">✍️</span><span>Registrér</span></button>
   <button class="nav-btn" id="nb-history" onclick="goTo('history')"><span class="nav-icon">📅</span><span>Historik</span></button>
 </nav>
@@ -574,16 +575,30 @@
     <p id="homeDate"></p>
   </div>
   <div id="homeUrgentCard" style="display:none;"></div>
+
+  <div class="card">
+    <div class="section-label" style="margin:0 0 10px;">NÅR DER SKER NOGET</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="tool-btn" onclick="openPanic()"><span class="tb-ic">🆘</span><span class="tb-tx">Panik-mode<span>Fakta/fantasi · vejrtrækning · tjekliste</span></span><span class="tb-ch">›</span></button>
+      <button class="tool-btn" onclick="openImpuls()"><span class="tb-ic">💡</span><span class="tb-tx">Impuls<span>Sige det nu — eller vente?</span></span><span class="tb-ch">›</span></button>
+      <button class="tool-btn" onclick="openGrib()"><span class="tb-ic">🤝</span><span class="tb-tx">Omsorg<span>Guide: mød hende i følelsen</span></span><span class="tb-ch">›</span></button>
+      <button class="tool-btn" onclick="openMoenster()"><span class="tb-ic">🔍</span><span class="tb-tx">Genkender du mønster?<span>Stop op før du handler</span></span><span class="tb-ch">›</span></button>
+    </div>
+  </div>
+
+  <div id="homeBrydeCard"></div>
+  <div id="homeHoldeKursenCard"></div>
+
+  <div class="section-label">HVER MORGEN</div>
   <div class="card" id="homeKlarCard"></div>
-  <div class="card" id="homeSessionCard" style="display:none;"></div>
   <div class="card" id="homeRemindersCard"></div>
+
+  <div class="card" id="homeSessionCard" style="display:none;"></div>
   <div class="card" id="homeDailyCard" style="display:none;">
     <div class="card-title">Dagsoversigt</div>
     <div id="homeDailyContent"></div>
     <button class="btn-secondary" style="margin-top:12px;" onclick="goTo('daily')">Udfyld dagsoversigt →</button>
   </div>
-  <div id="homeHoldeKursenCard"></div>
-  <div id="homeBrydeCard"></div>
   <div id="homeScore"></div>
 </div>
 
@@ -658,7 +673,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v41';
+const APP_VERSION = 'v42';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -2778,9 +2793,20 @@ function renderMoenster() {
           Nævn bagefter selv at du blev opmærksom på mønsteret — og gerne hvad du vil gøre for at undgå det igen.
         </div>
       </div>
+      <button class="btn-primary" onclick="logMoenster()">✓ Registrér genkendt mønster</button>
     ` : ''}
     <button class="btn-secondary" onclick="setMoensterAnswer(null)">← Tilbage</button>
   `;
+}
+
+function logMoenster() {
+  const el = _getEventLog();
+  el.push({ key: 'monster', label: '🔍 Genkendte mønster' + (_moensterChecked.length ? ' (' + _moensterChecked.length + ')' : ''), points: 0, cat: 'vaerktoj', date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  _saveEventLog(el);
+  showToast('🔍 Mønster registreret');
+  closeMoenster();
+  renderRegistrer();
+  renderHome();
 }
 
 function renderAdfaerdBtns() {
@@ -3448,9 +3474,13 @@ function recordHoldeKursenOutcome(key) {
   const log = _getHoldeKursenLog();
   log.push({ id: Date.now(), date: todayKey(), week: getWeekKey(), feeling: feeling.label, outcome: outcome.label, points, ts: Date.now() });
   _saveHoldeKursenLog(log);
+  const el = _getEventLog();
+  el.push({ key: 'holdekursen', label: '🧭 Holde kursen · ' + outcome.label.slice(0, 44), points, cat: 'vaerktoj', date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  _saveEventLog(el);
   showToast(`${points > 0 ? '+' : ''}${points} point`);
   if (points > 0) showRewardImage();
   _holdeKursenSelected = null;
+  renderRegistrer();
   renderHome();
   const dd = document.getElementById('holdeKursenDropdown');
   if (dd) dd.classList.add('open');
@@ -3522,6 +3552,9 @@ function stopBryde() {
   b.active = null;
   _saveBryde(b);
   clearInterval(_brydeInterval);
+  const el = _getEventLog();
+  el.push({ key: 'bryde', label: '🌀 Bryde tilstand · ' + formatBrydeDuration(minutes), points: 0, cat: 'vaerktoj', date: todayKey(), week: getWeekKey(), ts: Date.now() });
+  _saveEventLog(el);
   showToast(`🌀 Bryde tilstand stoppet · ${formatBrydeDuration(minutes)}`);
   renderHome();
 }
