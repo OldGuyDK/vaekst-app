@@ -620,7 +620,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v44';
+const APP_VERSION = 'v45';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -951,7 +951,13 @@ function toggleReminderDone(id) {
   renderHome();
 }
 function toggleReminderMeldt(id) {
-  _getAllRems().forEach(r => { if (r.id === id) r.meldtTilbage = !r.meldtTilbage; });
+  _getAllRems().forEach(r => {
+    if (r.id === id) {
+      r.meldtTilbage = !r.meldtTilbage;
+      if (r.meldtTilbage) { cancelReminderNotifs(id); _notifiedRems.add(id); }
+      else { _notifiedRems.delete(id); scheduleReminderNotifs(r); }
+    }
+  });
   saveReminders();
   renderHome();
 }
@@ -966,6 +972,10 @@ function confirmSnooze(id) {
     if (r.id === id) {
       if (timeEl && timeEl.value) r.time = timeEl.value;
       if (dateEl && dateEl.value) r.date = dateEl.value;
+      // Flyttet til ny dato/tid: nulstil alarm-tilstand og planlæg notifikationer forfra
+      _notifiedRems.delete(id);
+      _alarmCooldown.delete(id);
+      scheduleReminderNotifs(r);
     }
   });
   _snoozingId = null;
@@ -1051,22 +1061,19 @@ function playAlarmBeep() {
 }
 
 function checkReminderAlarms() {
+  const today = todayKey();
   const now = new Date();
   const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
   _getAllRems().forEach(r => {
-    if (!r.time || r.done || r.meldtTilbage) return;
-    const alarmPassed = r.time <= hhmm;
-    if (!alarmPassed) return;
-    const last = _alarmCooldown.get(r.id) || 0;
-    const cooldownOk = !_notifiedRems.has(r.id) || (Date.now() - last) > 2 * 60 * 1000;
-    if (cooldownOk) {
-      _notifiedRems.add(r.id);
-      _alarmCooldown.set(r.id, Date.now());
-      playAlarmBeep();
-      showToast('⏰ ' + r.text);
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted')
-        new Notification('Vækst reminder', { body: r.text });
-    }
+    if (r.done || r.meldtTilbage || !r.time || !r.date) return;
+    // Kun når BÅDE dato og klokkeslæt er passeret — ikke bare klokkeslættet
+    const due = r.date < today || (r.date === today && r.time <= hhmm);
+    if (!due || _notifiedRems.has(r.id)) return;
+    _notifiedRems.add(r.id);
+    playAlarmBeep();
+    showToast('⏰ ' + r.text);
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted')
+      new Notification('Vækst reminder', { body: r.text });
   });
 }
 setInterval(checkReminderAlarms, 30000);
