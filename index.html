@@ -554,6 +554,24 @@
   </div>
 </div>
 
+<!-- SAFE MODE OVERLAY -->
+<div class="panic-overlay" id="safeOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:#0d9488;">🛡️ Safe mode</div>
+    <button class="close-x" onclick="closeSafe()">✕</button>
+  </div>
+  <div id="safeContent"></div>
+</div>
+
+<!-- AWARENESS MODE OVERLAY -->
+<div class="panic-overlay" id="awareOverlay">
+  <div class="panic-top">
+    <div class="panic-heading" style="color:#d97706;">👁️ Awareness mode</div>
+    <button class="close-x" onclick="closeAware()">✕</button>
+  </div>
+  <div id="awareContent"></div>
+</div>
+
 <!-- MØNSTER OVERLAY -->
 <div class="panic-overlay" id="moensterOverlay">
   <div class="panic-top">
@@ -596,8 +614,9 @@
     <div class="section-label" style="margin:0 0 10px;">NÅR DER SKER NOGET</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button class="tool-btn" onclick="openPanic()"><span class="tb-ic">🆘</span><span class="tb-tx">Panik-mode<span>Fakta/fantasi · vejrtrækning · tjekliste</span></span><span class="tb-ch">›</span></button>
+      <button class="tool-btn" onclick="openSafe()"><span class="tb-ic">🛡️</span><span class="tb-tx">Safe mode<span>Det jeg lover — så du er tryg</span></span><span class="tb-ch">›</span></button>
+      <button class="tool-btn" onclick="openAware()"><span class="tb-ic">👁️</span><span class="tb-tx">Awareness mode<span>Ikke længere hendes ansvar</span></span><span class="tb-ch">›</span></button>
       <button class="tool-btn" onclick="openImpuls()"><span class="tb-ic">💡</span><span class="tb-tx">Impuls<span>Sige det nu — eller vente?</span></span><span class="tb-ch">›</span></button>
-      <button class="tool-btn" onclick="openGrib()"><span class="tb-ic">🤝</span><span class="tb-tx">Omsorg<span>Guide: mød hende i følelsen</span></span><span class="tb-ch">›</span></button>
       <button class="tool-btn" onclick="openMoenster()"><span class="tb-ic">🔍</span><span class="tb-tx">Genkender du mønster?<span>Stop op før du handler</span></span><span class="tb-ch">›</span></button>
       <button class="tool-btn" onclick="openMantra()"><span class="tb-ic">🧘</span><span class="tb-tx">Mantraer<span>Læs igennem — stop op ved enhver impuls</span></span><span class="tb-ch">›</span></button>
     </div>
@@ -659,7 +678,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v46';
+const APP_VERSION = 'v47';
 function openGPT(text) {
   if (text) {
     try { navigator.clipboard.writeText(text); } catch(e) {}
@@ -1122,45 +1141,6 @@ if (typeof Notification !== 'undefined' && Notification.permission === 'default'
 const KLAR_ITEMS = [
   { label: 'På forkant med:', type: 'text' },
   'Er jeg på forkant med det vi har aftalt?',
-  'Plan for dagen?',
-  'Ændringer for dagen?',
-  { label: 'Vigtig info der skal meldes ud?', type: 'labyrinth', questions: [
-    { q: 'Åbning — bed om lov', hint: 'Giv hende nok til at tage stilling uden at skabe uro. Størrelse + emne + valg.', examples: [
-      '"Jeg har en lille praktisk ting om en regning — vil du høre det nu eller i morgen?"',
-      '"Jeg har et hurtigt spørgsmål om weekenden — passer det nu?"',
-      '"Jeg har noget jeg gerne vil fortælle dig om [emne] — hvornår passer det?"',
-    ]},
-    { q: 'Hvad er det konkrete?', hint: 'Sig det i én sætning. Ingen baggrund, ingen kontekst endnu.', examples: [
-      '"Jeg har ikke bestilt [X]"',
-      '"Jeg har glemt at ringe til [Y]"',
-    ]},
-    { q: 'Hvad har jeg allerede gjort?', hint: 'Find mindst ét ting du har håndteret, overvejet eller planlagt.', examples: [
-      '"Jeg har kigget på hvornår det senest kan gøres"',
-      '"Jeg har et forslag til hvordan vi løser det"',
-    ]},
-    { q: 'Hvad er det mindste jeg beder om?', hint: 'Beder du om information, en beslutning, eller praktisk hjælp? Vær specifik og lille.', examples: [
-      '"Jeg beder bare om at du ved det"',
-      '"Jeg beder om at du vælger mellem A og B"',
-      '"Jeg beder om 10 minutter til at løse det sammen"',
-    ]},
-    { q: 'Hvad viser at jeg har tænkt på dig?', hint: 'Find én sætning der anerkender hendes situation.', examples: [
-      '"Jeg ved du har meget i dag..."',
-      '"Det her er ikke ideelt tidspunkt, men jeg vil hellere sige det nu..."',
-      '"Jeg har prøvet at gøre det så overskueligt som muligt..."',
-    ]},
-    { q: 'Start med "Jeg har..." — ikke "Vi skal..."', hint: 'Din åbningssætning sætter tonen for hvordan det modtages.', examples: [
-      '"Jeg skal fortælle dig noget — jeg har [konkret]. Jeg har allerede [løsning]. Det eneste jeg beder om er [lille ting]."',
-      '"Jeg er sent ude, men her er hvad jeg gør nu..."',
-    ]},
-  ]},
-  { label: 'Uselvisk, uopfordret initiativ', type: 'initiative' },
-  { label: 'Tilbyde min assistance', info: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
-  { label: 'Tage lead på eget initiativ', info: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
-  { label: 'Initiativ - Omsorg', subs: [
-    'Du har i går nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!',
-    'Du var der for mig i går, jeg vil gerne være der for dig i dag?',
-    'Jeg vil gerne gengælde den omsorg du viste mig i går, hvad kan jeg gøre for dig i dag?',
-  ]},
 ];
 
 // ---- FÆLLES UI-HJÆLPERE ----
@@ -1555,6 +1535,111 @@ function closeGrib() { document.getElementById('gribOverlay').classList.remove('
 
 function openMantra() { document.getElementById('mantraOverlay').classList.add('show'); document.getElementById('mantraOverlay').scrollTop = 0; }
 function closeMantra() { document.getElementById('mantraOverlay').classList.remove('show'); }
+
+// ---- SAFE MODE ----
+const SAFE_ITEMS = [
+  { title: 'Jeg kører ikke over for rødt.', text: 'Når du siger stop, nej eller har brug for plads, respekterer jeg det. Uden at diskutere, presse eller forsøge at overtale dig.' },
+  { title: 'Jeg tager kontakt, når jeg mærker, at noget er svært.', text: 'Hvis du er ked af det, bekymret eller usædvanligt stille, spørger jeg omsorgsfuldt ind. Jeg lader det ikke bare passere.' },
+  { title: 'Jeg lytter, før jeg løser.', text: 'Når du fortæller om noget, der gør ondt eller bekymrer dig, prøver jeg først at forstå, hvordan du har det. Jeg begynder ikke med forklaringer, forsvar eller løsninger.' },
+  { title: 'Jeg tænker på dig, før jeg handler på mine impulser.', text: 'Når jeg får en idé eller får lyst til noget, stopper jeg op og overvejer, hvad det betyder for dig og vores aftaler. Hvis det berører dig, spørger jeg: "Hvordan vil du have det med ...?"' },
+  { title: 'Jeg giver dig tid til at tænke.', text: 'Jeg forventer ikke svar eller beslutninger med det samme. Og jeg lader ikke min egen usikkerhed blive til et pres på dig.' },
+  { title: 'Jeg tager initiativ og er på forkant.', text: 'Jeg følger selv op på det, du fortæller mig, og tager initiativ til samtaler, praktiske opgaver og hjælp. Du skal ikke være den, der hele tiden bringer tingene på banen.' },
+  { title: 'Det, jeg opdager, tager jeg ansvar for.', text: 'Når jeg kommer i tanke om noget, har glemt en aftale eller opdager en opgave, gør jeg noget ved det med det samme. Jeg løser det, planlægger det eller melder ærligt ud, hvis jeg ikke kan.' },
+  { title: 'Jeg tager ansvar uden bortforklaringer.', text: 'Når jeg har gjort noget forkert, siger jeg det selv, anerkender hvordan det har påvirket dig og tager ansvar for at rette op.' },
+];
+
+function renderFoldList(items, prefix, intro, numbered = true) {
+  return `<div class="card">` + (intro ? `<div class="card-title" style="font-size:16px;">${intro}</div>` : '') + items.map((it, i) => {
+    const label = `${numbered ? (i + 1) + '. ' : ''}${it.title}`;
+    const border = `border-bottom:${i < items.length - 1 ? '1px solid var(--border)' : 'none'};`;
+    if (!it.text && !it.html) {
+      return `<div style="${border}"><div style="margin:6px 0;padding:13px 16px;border-radius:12px;border:2px solid var(--border);background:var(--card2);font-weight:700;font-size:14px;line-height:1.4;">${label}</div></div>`;
+    }
+    const body = it.html || (it.text || '').replace(/\n/g, '<br>');
+    return `
+    <div style="${border}">
+      <button class="dropdown-toggle" onclick="toggleDropdown('${prefix}${i}')" style="margin:6px 0;">
+        <span style="font-weight:700;font-size:14px;line-height:1.4;padding-right:8px;">${label}</span>
+        <span>▾</span>
+      </button>
+      <div class="dropdown-list" id="${prefix}${i}" style="margin:0 0 8px;">
+        <div style="padding:12px 14px;font-size:14px;line-height:1.6;background:var(--card2);">${body}</div>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function openSafe() {
+  document.getElementById('safeContent').innerHTML = renderFoldList(SAFE_ITEMS, 'safeItem');
+  document.getElementById('safeOverlay').classList.add('show');
+}
+function closeSafe() { document.getElementById('safeOverlay').classList.remove('show'); }
+
+// ---- AWARENESS MODE ----
+const AWARE_ITEMS = [
+  { title: 'At minde mig om aftaler og opgaver.', text: 'Jeg holder selv styr på dem og følger dem til dørs.' },
+  { title: 'At være på forkant med kalenderen.', text: 'Jeg orienterer mig selv om, hvad der kommer, og hvad det kræver.' },
+  { title: 'At tage initiativ til praktiske ting.', text: 'Jeg opdager selv opgaver og tager ansvar for at få dem løst.' },
+  { title: 'At planlægge, hvordan mine opgaver bliver løst.', text: 'Jeg finder selv tid, fremgangsmåde og eventuelle alternativer.' },
+  { title: 'At følge op på ting, du har bedt mig om.', text: 'Jeg giver selv besked om, hvornår og hvordan de bliver løst.' },
+  { title: 'At opdage konsekvenserne af mine ændrede planer.', text: 'Jeg undersøger selv, hvem og hvad ændringerne påvirker, og afklarer det i god tid.' },
+  { title: 'At opdage og rette op på mine forglemmelser.', text: 'Jeg siger selv til, når jeg opdager noget, og kommer med en konkret løsning.' },
+  { title: 'At skulle træffe beslutninger om alt det, jeg selv kan håndtere.', text: 'Jeg tager selv stilling og handler inden for de rammer, vi har aftalt.' },
+  { title: 'At sikre, at jeg overholder vores aftaler om plads og privatliv.', text: 'Jeg holder mig selv inden for de rammer, vi har aftalt, uden at du skal minde mig om dem.' },
+];
+
+const AWARE_LABYRINTH = [
+  { q: 'Åbning — bed om lov', hint: 'Giv hende nok til at tage stilling uden at skabe uro. Størrelse + emne + valg.', examples: [
+    '"Jeg har en lille praktisk ting om en regning — vil du høre det nu eller i morgen?"',
+    '"Jeg har et hurtigt spørgsmål om weekenden — passer det nu?"',
+    '"Jeg har noget jeg gerne vil fortælle dig om [emne] — hvornår passer det?"',
+  ]},
+  { q: 'Hvad er det konkrete?', hint: 'Sig det i én sætning. Ingen baggrund, ingen kontekst endnu.', examples: [
+    '"Jeg har ikke bestilt [X]"',
+    '"Jeg har glemt at ringe til [Y]"',
+  ]},
+  { q: 'Hvad har jeg allerede gjort?', hint: 'Find mindst ét ting du har håndteret, overvejet eller planlagt.', examples: [
+    '"Jeg har kigget på hvornår det senest kan gøres"',
+    '"Jeg har et forslag til hvordan vi løser det"',
+  ]},
+  { q: 'Hvad er det mindste jeg beder om?', hint: 'Beder du om information, en beslutning, eller praktisk hjælp? Vær specifik og lille.', examples: [
+    '"Jeg beder bare om at du ved det"',
+    '"Jeg beder om at du vælger mellem A og B"',
+    '"Jeg beder om 10 minutter til at løse det sammen"',
+  ]},
+  { q: 'Hvad viser at jeg har tænkt på dig?', hint: 'Find én sætning der anerkender hendes situation.', examples: [
+    '"Jeg ved du har meget i dag..."',
+    '"Det her er ikke ideelt tidspunkt, men jeg vil hellere sige det nu..."',
+    '"Jeg har prøvet at gøre det så overskueligt som muligt..."',
+  ]},
+  { q: 'Start med "Jeg har..." — ikke "Vi skal..."', hint: 'Din åbningssætning sætter tonen for hvordan det modtages.', examples: [
+    '"Jeg skal fortælle dig noget — jeg har [konkret]. Jeg har allerede [løsning]. Det eneste jeg beder om er [lille ting]."',
+    '"Jeg er sent ude, men her er hvad jeg gør nu..."',
+  ]},
+];
+
+const AWARE_FORKANT = [
+  { title: 'Plan for dagen?' },
+  { title: 'Ændringer for dagen?' },
+  { title: 'Vigtig info der skal meldes ud?', html: AWARE_LABYRINTH.map((q, i) => `
+    <div style="margin-bottom:14px;">
+      <div style="font-weight:700;">${i + 1}. ${q.q}</div>
+      <div style="font-size:12px;color:var(--muted);margin:2px 0 6px;">${q.hint}</div>
+      ${q.examples.map(ex => `<div style="font-size:13px;color:var(--muted);padding:4px 8px;border-left:2px solid var(--border);margin-bottom:4px;font-style:italic;">${ex}</div>`).join('')}
+    </div>`).join('') },
+  { title: 'Uselvisk, uopfordret initiativ' },
+  { title: 'Tilbyde min assistance', text: 'Jeg vil gerne hjælpe til at gøre ...... færdigt\nEr det noget du gerne vil rykke på?\n\nJeg har et overblik over hvad det kræver\nog forventer det vil tage 1,5 time\nEr det noget vi skal sætte tid af til i kalenderen?' },
+  { title: 'Tage lead på eget initiativ', text: 'Jeg vil gerne sætte det her igang, jeg har selv nogle idéer.\nMen vil gerne lige vende det med dig, og høre hvad du tænker om det?' },
+  { title: 'Initiativ - Omsorg', text: '• Du har i går nævnt ... som jeg kunne se du var berørt af, jeg vil gerne være der for dig nu!\n• Du var der for mig i går, jeg vil gerne være der for dig i dag?\n• Jeg vil gerne gengælde den omsorg du viste mig i går, hvad kan jeg gøre for dig i dag?' },
+];
+
+function openAware() {
+  document.getElementById('awareContent').innerHTML =
+    renderFoldList(AWARE_ITEMS, 'awareItem', 'Ikke længere hendes ansvar:') +
+    renderFoldList(AWARE_FORKANT, 'awareForkant', 'På forkant', false);
+  document.getElementById('awareOverlay').classList.add('show');
+}
+function closeAware() { document.getElementById('awareOverlay').classList.remove('show'); }
 
 function openImpuls() {
   imp = { text: '', stopped: null, followUps: [], followUpDone: false, feelings: [], feelingsDone: false, strategies: [], strategiesDone: false, type: null, forMig: null, forPartner: null, partnerNu: null, timerVal: 2, timerUnit: 'timer' };
